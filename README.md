@@ -45,7 +45,7 @@ conda activate comp0197-group-project
 pip install -r requirements.txt
 ```
 
-3. Download data from [Sharepoint](https://liveuclac-my.sharepoint.com/personal/ucabtc6_ucl_ac_uk/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fucabtc6%5Fucl%5Fac%5Fuk%2FDocuments%2FApplied%20Deep%20Learning%2FDataset&ga=1).
+3. Download data from [Sharepoint](https://liveuclac-my.sharepoint.com/:f:/g/personal/ucabtc6_ucl_ac_uk/EsA5CnS2RLRJstq7emQ_bykBY9_P9JRd5l9ZBzJW2Mtncg?e=RbNbt9).
 
 Alternatively, download them from https://www.robots.ox.ac.uk/~vgg/data/pets/ and untar inside the data folder.
 Do not push these files to Github. 
