@@ -9,6 +9,7 @@ Implement and evaluate a semi-supervised neural network for semantic segmentatio
 ```
 comp0197-group-project/
 ├── main.py
+├── config.ini
 ├── data/
 ├── models/
 │   ├── model1.py

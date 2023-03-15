@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 from utils.datasets import get_train_valid_data, get_test_data
+from utils.load_config import load_config
 
-
-# Set hyperparameters
-root_dir = "data"
-batch_size = 32
-image_size = 224
-labelled_fraction = .5
-valid_fraction = .2
+# Load configuration
+config = load_config("config.ini")
+root_dir = config['DataSets']['Dir']
+batch_size = int(config['DataSets']['BatchSize'])
+image_size = int(config['DataSets']['ImageSize'])
+labelled_fraction = float(config['DataSets']['LabelledFraction'])
+valid_fraction = float(config['DataSets']['ValidFraction'])
 
 # Dummy tests
 labelled_train_loader, unlabelled_train_loader, valid_loader = get_train_valid_data(root_dir, batch_size, image_size, labelled_fraction, valid_fraction)
