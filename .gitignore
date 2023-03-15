@@ -1,2 +1,4 @@
 data/images/
 data/annotations/
+*.tar.gz
+__pycache__/
