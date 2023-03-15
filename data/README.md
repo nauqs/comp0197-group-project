@@ -1,0 +1,1 @@
+This directory contains the input data and should be structured for training, validation, and testing datasets. Each should contain the images and their corresponding ground truth masks.
