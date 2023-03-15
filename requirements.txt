@@ -1,0 +1,6 @@
+# This file is for including all the additional libraries for the project
+# We are allowed to import 3 additional libraries
+# With this file, you can eaisly install all the libraries with one command (running in the project directory)
+#     pip install -r requirements.txt
+# Below is an example of how to include a library (without the hash tag)
+# tensorflow==2.3.1
