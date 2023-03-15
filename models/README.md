@@ -1,0 +1,1 @@
+This directory contains different models used for the semi-supervied image segmentation. Each model should be defined in a separate Python file.
