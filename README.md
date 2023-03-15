@@ -2,7 +2,7 @@
 
 ## Semi-supervised segmentation using deep neural networks
 
-Implement and evaluate a semi-supervised neural network for semantic segmentation of images on the [The Oxford-IIIT Pet Data-set](https://link-url-here.org).
+Implement and evaluate a semi-supervised neural network for semantic segmentation of images on the [The Oxford-IIIT Pet Data-set](https://www.robots.ox.ac.uk/~vgg/data/pets/).
 
 ### Project structure
 
@@ -27,6 +27,7 @@ comp0197-group-project/
 │   ├── experiment2/
 │   ├── ...
 │   └── experimentN/
+└── requirements.txt
 ```
 
 ### Instructions
