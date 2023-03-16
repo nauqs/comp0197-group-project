@@ -43,20 +43,23 @@ def get_train_valid_data(root_dir, batch_size, image_size, labelled_fraction=.5,
 
     print("Loading training and validation data...")
 
-    columns = ["filename", "class_id", "species_id", "breed_id"]
+    columns = ["filename", "class_id", "species_id", "breed_id", "split"]
     
     # Load dataset metadata  
     train_val_df = pd.read_csv(os.path.join(root_dir, "annotations/trainval.txt"), sep=" ", header=None, names=columns)
     train_val_filenames = train_val_df['filename'].values.tolist()
     
-    # TODO: improve split strategy (use breed_id/class_id/species_id idk)
-    # Split in train and validation 80/20
-    shuffled_indices = torch.randperm(len(train_val_filenames))
-    train_val_filenames = [train_val_filenames[i] for i in shuffled_indices]
-    train_filenames = train_val_filenames[:int((1-valid_fraction) * len(train_val_filenames))]
-    valid_filenames = train_val_filenames[int((1-valid_fraction) * len(train_val_filenames)):]
+    # Split in train and validation 80/20 using the train and valid columns
+    train_filenames = train_val_filenames[train_val_df['split'] == 'train']
+    valid_filenames = train_val_filenames[train_val_df['split'] == 'valid']
 
     # Split train in labelled and unlabelled
+    torch.manual_seed(42)
+    train_shuffled_indices = torch.randperm(len(train_filenames)).tolist()
+    valid_shuffled_indices = torch.randperm(len(valid_filenames)).tolist()
+    train_filenames = [train_filenames[i] for i in train_shuffled_indices]
+    valid_filenames = [valid_filenames[i] for i in valid_shuffled_indices]
+
     train_labelled_filenames = train_filenames[:int(labelled_fraction * len(train_filenames))]
     train_unlabelled_filenames = train_filenames[int(labelled_fraction * len(train_filenames)):]
 
