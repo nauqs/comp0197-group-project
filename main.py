@@ -16,11 +16,11 @@ test_loader = get_test_data(root_dir, image_size, batch_size)
 
 images, masks = next(iter(labelled_train_loader))
 
-# Plot 10 pairs of images and masks in subplots
-fig, ax = plt.subplots(2, 10, figsize=(10, 2))
-for i in range(10):
-    ax[0, i].imshow(images[i].permute(1, 2, 0))
-    ax[0, i].axis("off")
-    ax[1, i].imshow(masks[i].squeeze(), cmap="gray")
-    ax[1, i].axis("off")
+# Plot a 5x5 grid of images and masks
+fig, ax = plt.subplots(5, 5, figsize=(10, 10))
+for i in range(5):
+    for j in range(5):
+        ax[i, j].imshow(images[i * 5 + j].permute(1, 2, 0))
+        ax[i, j].imshow(masks[i * 5 + j].permute(1, 2, 0), alpha=0.5)
+        ax[i, j].axis('off')
 plt.show()

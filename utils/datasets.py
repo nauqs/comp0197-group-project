@@ -9,7 +9,7 @@ import pandas as pd
 class ImageSegmentationDataset(Dataset):
     def __init__(self, filenames, image_size, labelled, root_dir="data"):
         self.image_dir = os.path.join(root_dir, "images")
-        self.mask_dir = os.path.join(root_dir, "annotations/trimaps")
+        self.mask_dir = os.path.join(root_dir, "annotations", "trimaps")
         self.filenames = filenames
         self.image_size = image_size
         self.labelled = labelled
@@ -46,7 +46,7 @@ def get_train_valid_data(root_dir, batch_size, image_size, labelled_fraction=.5,
     columns = ["filename", "class_id", "species_id", "breed_id", "split"]
     
     # Load dataset metadata  
-    train_val_df = pd.read_csv(os.path.join(root_dir, "annotations/trainval_split.txt"), sep=" ", header=None, names=columns)
+    train_val_df = pd.read_csv(os.path.join(root_dir, "annotations", "trainval_split.txt"), sep=" ", header=None, names=columns)
     
     # Split in train and validation 80/20 using the train and valid columns
     train_filenames = train_val_df[train_val_df['split'] == 'train']['filename'].values.tolist()
@@ -82,7 +82,7 @@ def get_test_data(root_dir, batch_size, image_size):
     columns = ["filename", "class_id", "species_id", "breed_id"]
     
     # Load dataset metadata  
-    test_df = pd.read_csv(os.path.join(root_dir, "annotations/test.txt"), sep=" ", header=None, names=columns)
+    test_df = pd.read_csv(os.path.join(root_dir, "annotations", "test.txt"), sep=" ", header=None, names=columns)
     test_filenames = test_df['filename'].values.tolist()
 
     # Create test dataset
