@@ -46,12 +46,11 @@ def get_train_valid_data(root_dir, batch_size, image_size, labelled_fraction=.5,
     columns = ["filename", "class_id", "species_id", "breed_id", "split"]
     
     # Load dataset metadata  
-    train_val_df = pd.read_csv(os.path.join(root_dir, "annotations/trainval.txt"), sep=" ", header=None, names=columns)
-    train_val_filenames = train_val_df['filename'].values.tolist()
+    train_val_df = pd.read_csv(os.path.join(root_dir, "annotations/trainval_split.txt"), sep=" ", header=None, names=columns)
     
     # Split in train and validation 80/20 using the train and valid columns
-    train_filenames = train_val_filenames[train_val_df['split'] == 'train']
-    valid_filenames = train_val_filenames[train_val_df['split'] == 'valid']
+    train_filenames = train_val_df[train_val_df['split'] == 'train']['filename'].values.tolist()
+    valid_filenames = train_val_df[train_val_df['split'] == 'valid']['filename'].values.tolist()
 
     # Split train in labelled and unlabelled
     torch.manual_seed(42)
