@@ -6,7 +6,7 @@ import os
 columns = ["filename", "class_id", "species_id", "breed_id"]
 data_dir = "../data/"
 
-train_val_df = pd.read_csv(os.path.join(data_dir, "annotations/trainval.txt"), sep=" ", header=None, names=columns)
+train_val_df = pd.read_csv(os.path.join(data_dir, "annotations", "trainval.txt"), sep=" ", header=None, names=columns)
 all_class = train_val_df['class_id'].unique()
 
 # for each class, split the data into .8 train and .2 validation
@@ -24,4 +24,4 @@ for c in all_class:
 train_val_df['split'] = train_val_df['filename'].apply(lambda x: "train" if x in train_filenames else "valid")
 
 # save the dataframe
-train_val_df.to_csv(os.path.join(data_dir, "annotations/trainval_split.txt"), sep=" ", header=False, index=False)
+train_val_df.to_csv(os.path.join(data_dir, "annotations", "trainval_split.txt"), sep=" ", header=False, index=False)
