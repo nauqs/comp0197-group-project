@@ -3,6 +3,12 @@ from torchvision.models import resnet50, ResNet50_Weights
 from torchvision.models.segmentation import deeplabv3_resnet50
 
 def load_deeplab(num_classes=1, use_imagenet_weights=True):
+    """
+    Initializes a DeepLabV3 segmentation model according to the paper
+    'Semi-Supervised Semantic Segmentation with Cross Pseudo Supervision'
+    
+    Known bug: the model requires at least two images in a batch.
+    """
     
     # load deeplab with random initialization
     deeplab = deeplabv3_resnet50(num_classes=num_classes)
