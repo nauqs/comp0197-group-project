@@ -1,1 +1,0 @@
-This directory contains helper functions, classes, and modules, such as data loaders, transforms, metrics, and other utilities used in the project.

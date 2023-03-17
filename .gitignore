@@ -1,4 +1,2 @@
-data/images/
-data/annotations/
-*.tar.gz
-__pycache__/
+__pycache__
+.DS_Store

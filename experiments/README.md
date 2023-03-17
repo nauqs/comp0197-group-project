@@ -1,1 +1,0 @@
-This directory contains subdirectories for each experiment conducted in the project. Each experiment should have its own train.py, test.py, and config.yaml files, as well as a results/ subdirectory to store the results of the experiment, and a models/ subdirectory to store the trained models.
