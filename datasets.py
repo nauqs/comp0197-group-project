@@ -48,3 +48,12 @@ def create_datasets(root='/tmp/adl_data', valid_frac=0.2, labelled_frac=0.125):
     _, train_lab_ds = torch.utils.data.random_split(train_all_ds, (1-labelled_frac, labelled_frac), generator=rng)
     
     return train_all_ds, train_lab_ds, valid_ds
+
+def create_dataloaders(batch_size=8, image_size=224, *args, **kwargs):
+    """
+    Generates datasets using 'create_datasets' and crates a
+    DataLoader for each dataset.
+    """
+    datasets = create_datasets(*args, **kwargs)
+    dataloaders = [DataLoader(ds, batch_size=batch_size, shuffle=True) for ds in datasets]
+    return dataloaders
