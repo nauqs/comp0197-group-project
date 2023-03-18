@@ -12,7 +12,8 @@ class OxfordIIITPetCached(OxfordIIITPet):
 
     @cache
     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-        return super().__getitem__(idx)
+        x, y = super().__getitem__(idx)
+        return x.cuda(), y.cuda()
 
 
 def load_dataset(root, split, size=224):

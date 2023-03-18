@@ -2,7 +2,6 @@ import torch
 import torch.nn.functional as F
 from time import time
 
-
 @torch.no_grad()
 def eval(model, dataloader):
     """
@@ -53,6 +52,7 @@ def train(model, train_all_dl, train_lab_dl, valid_dl, epochs, lr=1e-3):
 
     # set optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    scaler = torch.cuda.amp.GradScaler()
 
     # iterate over epochs
     for epoch in range(epochs):
@@ -69,22 +69,26 @@ def train(model, train_all_dl, train_lab_dl, valid_dl, epochs, lr=1e-3):
             labeled_pixels = labels != 2
 
             # zero gradients
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             # get model predictions
-            logits = model(images)["out"][:, 0]
+            
+            with torch.cuda.amp.autocast(dtype=torch.float16):
+                logits = model(images)["out"][:, 0]
 
-            # compute loss, accuracy on labeled pixels
-            loss = F.binary_cross_entropy_with_logits(
-                logits[labeled_pixels], labels[labeled_pixels].float()
-            )
+                # compute loss, accuracy on labeled pixels
+                loss = F.binary_cross_entropy_with_logits(
+                    logits[labeled_pixels], labels[labeled_pixels].float()
+                )
+
             acc = (
                 ((logits[labeled_pixels] > 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
-            loss.backward()
-            optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             train_loss += loss.item() / n_batches
             train_acc += acc.item() / n_batches
 
