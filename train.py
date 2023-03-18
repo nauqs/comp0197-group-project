@@ -32,7 +32,7 @@ def eval(model, dataloader):
     return epoch_loss, epoch_acc
 
 
-def train(model, train_all_dl, train_lab_dl, valid_dl, epochs=1, lr=1e-3):
+def train(model, train_all_dl, train_lab_dl, valid_dl, epochs, lr=1e-3):
     """
     Trains a segmentation model.
     
@@ -79,11 +79,10 @@ def train(model, train_all_dl, train_lab_dl, valid_dl, epochs=1, lr=1e-3):
             optimizer.step()
             train_loss += loss.item() / n_batches
             train_acc += acc.item() / n_batches
-            print(loss.item())
 
         # print statistics
         val_loss, val_acc = eval(model, valid_dl)
         epoch_time = -t + (t := time()) # time per epoch
-        print(f'epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {valid_acc=:4.2%}')
+        print(f'epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}')
 
     return model
