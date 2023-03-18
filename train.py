@@ -18,7 +18,7 @@ def eval(model, dataloader):
         images, labels = images.to(device), labels.to(device)
 
         # get a mask of labeled pixels (foreground/background)
-        labeled_pixels = labels != 3
+        labeled_pixels = labels != 2
 
         # get model predictions
         logits = model(images)['out'][:, 0]
@@ -64,7 +64,7 @@ def train(model, train_all_dl, train_lab_dl, valid_dl, epochs, lr=1e-3):
             images, labels = images.to(device), labels.to(device)
             
             # get a mask of labeled pixels (foreground/background)
-            labeled_pixels = labels != 3
+            labeled_pixels = labels != 2
 
             # zero gradients
             optimizer.zero_grad()
