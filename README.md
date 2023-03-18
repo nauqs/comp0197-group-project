@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 3. Training
 
-For training, you need an Nvidia GPU (CPU technically works but it's slow). It's relitely simple to train with a free Google Colab GPU:
+To train in Colab:
 - clone this repository into your Google Drive account
 - create a new Google Colab notebook
 - in the Colab menu bar, click Runtime -> Change runtime type -> Hardware accelerator -> GPU
