@@ -11,49 +11,65 @@ def load_dataset(root, split, size=224):
     returns a Dataset with:
     - images as normalized float32 tensors
     - labels as uint 8 tensors
-    
+
     the labels are:
     - 0: foreground
     - 1: background
     - 2: not classified
-    
+
     Both images and labels are resized to [size, size].
     """
-    
+
     # define image and label transforms
-    image_transform = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        torchvision.transforms.Resize([size, size]),
-    ])
-    label_transform = torchvision.transforms.Compose([
-        lambda label: torch.from_numpy(np.array(label)), # PIL -> uint8 tensor
-        lambda label: label - 1, # shift labels from [1, 2, 3] to [0, 1, 2]
-        lambda label: TF.resize(label[None], [size, size])[0],
-    ])
-    
+    image_transform = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            torchvision.transforms.Resize([size, size]),
+        ]
+    )
+    label_transform = torchvision.transforms.Compose(
+        [
+            lambda label: torch.from_numpy(np.array(label)),  # PIL -> uint8 tensor
+            lambda label: label - 1,  # shift labels from [1, 2, 3] to [0, 1, 2]
+            lambda label: TF.resize(label[None], [size, size])[0],
+        ]
+    )
+
     # load dataset
-    ds = OxfordIIITPet(root=root, split=split, target_types='segmentation', download=True, transform=image_transform, target_transform=label_transform)
-    
+    ds = OxfordIIITPet(
+        root=root,
+        split=split,
+        target_types="segmentation",
+        download=True,
+        transform=image_transform,
+        target_transform=label_transform,
+    )
+
     return ds
 
 
-def create_datasets(root='/tmp/adl_data', valid_frac=0.2, labelled_frac=0.125):
+def create_datasets(root="/tmp/adl_data", valid_frac=0.2, labelled_frac=0.125):
     """
     Returns:
     - train_all_ds: labeled and unlabeled training images
     - train_lab_ds: labeled training images
     - valid_ds: validation images
     """
-    trainval_ds = load_dataset(root, 'trainval')
-    test_ds = load_dataset(root, 'test')
+    trainval_ds = load_dataset(root, "trainval")
+    test_ds = load_dataset(root, "test")
 
     rng = torch.Generator()
     rng.manual_seed(0)
-    train_all_ds, valid_ds = torch.utils.data.random_split(trainval_ds, (1-valid_frac, valid_frac), generator=rng)
-    _, train_lab_ds = torch.utils.data.random_split(train_all_ds, (1-labelled_frac, labelled_frac), generator=rng)
-    
+    train_all_ds, valid_ds = torch.utils.data.random_split(
+        trainval_ds, (1 - valid_frac, valid_frac), generator=rng
+    )
+    _, train_lab_ds = torch.utils.data.random_split(
+        train_all_ds, (1 - labelled_frac, labelled_frac), generator=rng
+    )
+
     return train_all_ds, train_lab_ds, valid_ds
+
 
 def create_dataloaders(batch_size=8, image_size=224, *args, **kwargs):
     """
@@ -61,5 +77,7 @@ def create_dataloaders(batch_size=8, image_size=224, *args, **kwargs):
     DataLoader for each dataset.
     """
     datasets = create_datasets(*args, **kwargs)
-    dataloaders = [DataLoader(ds, batch_size=batch_size, shuffle=True) for ds in datasets]
+    dataloaders = [
+        DataLoader(ds, batch_size=batch_size, shuffle=True) for ds in datasets
+    ]
     return dataloaders
