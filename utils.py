@@ -1,12 +1,19 @@
 import torch
 import torchvision
 from pathlib import Path
+import datasets
+
+
+def unnormalize_images(images):
+    mean, std = torch.tensor(datasets.DS_STATS['classification'])
+    images = images * std[None, :, None, None] + mean[None, :, None, None]
+    return images.clip(0, 1)
 
 
 def visualize_predictions(images, logits, filename):
 
     # normalize images to [0, 1]
-    images = images * 0.5 + 0.5
+    images = unnormalize_images(images)
 
     # convert logits to class probabilites
     probs = 1 - torch.sigmoid(logits)
