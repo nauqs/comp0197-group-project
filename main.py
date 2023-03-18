@@ -17,7 +17,7 @@ if __name__ == '__main__':
     model = model.to(device)
     
     # train
-    train.train(model, train_all_dl, train_lab_dl, valid_dl, epochs=20)
+    train.train(model, train_all_dl, train_lab_dl, valid_dl, epochs=10)
     
     # save model
     Path('weights').mkdir(parents=True, exist_ok=True)
