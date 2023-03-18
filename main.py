@@ -20,7 +20,7 @@ if __name__ == '__main__':
     train.train(model, train_all_dl, train_lab_dl, valid_dl, epochs=20)
     
     # save model
-    Path('wegihts').mkdir(parents=True, exist_ok=True)
+    Path('weights').mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), 'weights/supervised.pt')
     
     # visualize predictions
