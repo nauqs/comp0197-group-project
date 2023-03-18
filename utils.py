@@ -9,7 +9,7 @@ def visualize_predictions(images, logits, filename):
     images = images*0.5 + 0.5
     
     # convert logits to class probabilites
-    probs = torch.sigmoid(logits)
+    probs = 1 - torch.sigmoid(logits)
     masks = probs[:, None, :, :].repeat(1, 3, 1, 1)
 
     # create image grid of imput images and predictions
