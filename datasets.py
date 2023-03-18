@@ -1,9 +1,18 @@
+from functools import cache
+from typing import Any, Tuple
 import numpy as np
 import torch
 import torchvision
 import torchvision.transforms.functional as TF
 from torchvision.datasets import OxfordIIITPet
 from torch.utils.data import DataLoader
+
+
+class OxfordIIITPetCached(OxfordIIITPet):
+
+    @cache
+    def __getitem__(self, idx: int) -> Tuple[Any, Any]:
+        return super().__getitem__(idx)
 
 
 def load_dataset(root, split, size=224):
@@ -37,7 +46,7 @@ def load_dataset(root, split, size=224):
     )
 
     # load dataset
-    ds = OxfordIIITPet(
+    ds = OxfordIIITPetCached(
         root=root,
         split=split,
         target_types="segmentation",

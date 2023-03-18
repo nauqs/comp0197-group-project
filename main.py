@@ -1,10 +1,11 @@
+import time
 import torch
 import datasets
 import models
 import train
 import utils
 from pathlib import Path
-
+from tqdm import tqdm
 
 if __name__ == "__main__":
 
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     train_all_dl, train_lab_dl, valid_dl = datasets.create_dataloaders(batch_size=32)
 
     # initialize model
-    model = models.load_deeplab(use_imagenet_weights=False, large_resnet=False)
+    model = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
     model = model.to(device)
 
     # train
