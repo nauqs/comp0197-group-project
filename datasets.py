@@ -13,22 +13,28 @@ def load_dataset(root, split, size=224):
     - labels as uint 8 tensors
     
     the labels are:
-    - 1: foreground
-    - 2: background
-    - 3: not classified
+    - 0: foreground
+    - 1: background
+    - 2: not classified
     
     Both images and labels are resized to [size, size].
     """
+    
+    # define image and label transforms
     image_transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         torchvision.transforms.Resize([size, size]),
     ])
     label_transform = torchvision.transforms.Compose([
-        lambda label: torch.from_numpy(np.array(label)),
+        lambda label: torch.from_numpy(np.array(label)), # PIL -> uint8 tensor
+        lambda label: label - 1, # shift labels from [1, 2, 3] to [0, 1, 2]
         lambda label: TF.resize(label[None], [size, size])[0],
     ])
+    
+    # load dataset
     ds = OxfordIIITPet(root=root, split=split, target_types='segmentation', download=True, transform=image_transform, target_transform=label_transform)
+    
     return ds
 
 
