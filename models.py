@@ -7,6 +7,16 @@ def load_deeplab(num_classes=1, use_imagenet_weights=True):
     Initializes a DeepLabV3 segmentation model according to the paper
     'Semi-Supervised Semantic Segmentation with Cross Pseudo Supervision'
     
+    The model outputs a dictionary where the key 'out' contains
+    the predicted mask. If the input images have shape [N, C, H, W], the
+    predicted mask has shape [N, 1, H, W]. The '1' corresponds to the
+    fact that we are only outputting a single logit, corresponding to
+    foreground/background:
+    >>> logits = model(images)['out'][:, 0]
+    
+    And to get probabilities from the logits, run:
+    >>> probs = torch.nn.functional.sigmoid(logits)
+    
     Known bug: the model requires at least two images in a batch.
     """
     
