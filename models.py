@@ -29,7 +29,6 @@ def load_deeplab(num_classes=1, use_imagenet_weights=True, large_resnet=False):
 
     # optionally initialize the backbone with imagenet weights
     if use_imagenet_weights:
-
         # load a resnet50 pretrained on imagenet
         weights = (
             ResNet101_Weights.IMAGENET1K_V2

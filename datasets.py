@@ -12,12 +12,11 @@ import math
 # normalizing constants (mean, std) for datasets
 # https://github.com/pytorch/vision/blob/b403bfc771e0caf31efd06d43860b09004f4ac61/torchvision/transforms/_presets.py#LL44C35-L44C56
 DS_STATS = {
-    'classification': ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    "classification": ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 }
 
 
 class OxfordIIITPetCached(OxfordIIITPet):
-
     @cache
     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
         return super().__getitem__(idx)
@@ -45,7 +44,7 @@ def load_dataset(root, split, size=224):
     image_transform = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(*DS_STATS['classification']),
+            torchvision.transforms.Normalize(*DS_STATS["classification"]),
             torchvision.transforms.Resize([size, size]),
         ]
     )

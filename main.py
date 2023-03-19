@@ -13,15 +13,20 @@ if __name__ == "__main__":
     print(f"using device: {device}")
 
     # create dataloaders
-    train_all_dl, train_lab_dl,train_unlab_dl, valid_dl, test_dl = datasets.create_dataloaders(batch_size=32)
+    (
+        train_all_dl,
+        train_lab_dl,
+        train_unlab_dl,
+        valid_dl,
+        test_dl,
+    ) = datasets.create_dataloaders(batch_size=32)
 
-    #TODO: add some cli arguments to control what to train, currently hardcoded
+    # TODO: add some cli arguments to control what to train, currently hardcoded
     train_supervised = False
     train_semi_supervised = True
 
-
     if train_supervised:
-    # initialize model
+        # initialize model
         model = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
         model = model.to(device)
         # train
@@ -34,8 +39,9 @@ if __name__ == "__main__":
         model1 = model1.to(device)
         model2 = model2.to(device)
         # train
-        train.train_semi_supervised(model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10)
-
+        train.train_semi_supervised(
+            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10
+        )
 
     # save model
     Path("weights").mkdir(parents=True, exist_ok=True)

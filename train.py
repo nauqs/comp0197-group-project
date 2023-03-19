@@ -90,7 +90,9 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
     return model
 
 
-def train_semi_supervised(model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=6):
+def train_semi_supervised(
+    model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=6
+):
     """
     Trains a segmentation model.
 
@@ -101,7 +103,7 @@ def train_semi_supervised(model1, model2, train_unlab_dl, train_lab_dl, valid_dl
     lamb is the weight of the cps loss.
 
     """
-    
+
     device = next(model1.parameters()).device
 
     # set optimizer to optimise both models
@@ -128,13 +130,12 @@ def train_semi_supervised(model1, model2, train_unlab_dl, train_lab_dl, valid_dl
                 # give next batch if we have more left
                 # don't pick up labels
                 unlabeled_images, _ = next(unlabeled_images_iter)
-                unlabeled_images= images.to(device)
+                unlabeled_images = images.to(device)
             except StopIteration:
                 # we ran out of unlabeled, restart the loop
                 # this only happens if there are more labeled than unlabeled, or batches are unequal
                 unlabeled_images_iter = iter(train_unlab_dl)
                 unlabeled_images = next(unlabeled_images_iter).to(device)
-
 
             # get a mask of labeled pixels (foreground/background)
             labeled_pixels = labels != 2
@@ -161,28 +162,33 @@ def train_semi_supervised(model1, model2, train_unlab_dl, train_lab_dl, valid_dl
                 lab_logits2[labeled_pixels], labels[labeled_pixels].float()
             )
 
-            loss_cps_lab1= F.binary_cross_entropy_with_logits(
+            loss_cps_lab1 = F.binary_cross_entropy_with_logits(
                 lab_logits1, lab_preds2.float()
             )
-            loss_cps_lab2= F.binary_cross_entropy_with_logits(
+            loss_cps_lab2 = F.binary_cross_entropy_with_logits(
                 lab_logits2, lab_preds1.float()
             )
 
-            loss_cps_unlab1= F.binary_cross_entropy_with_logits(
+            loss_cps_unlab1 = F.binary_cross_entropy_with_logits(
                 unlab_logits1, unlab_preds2.float()
             )
-            loss_cps_unlab2= F.binary_cross_entropy_with_logits(
+            loss_cps_unlab2 = F.binary_cross_entropy_with_logits(
                 unlab_logits2, unlab_preds1.float()
             )
             # total loss = loss_sup + lamb * loss_cps
-            loss = loss_sup1 + loss_sup2 + lamb * (loss_cps_lab1 + loss_cps_lab2 + loss_cps_unlab1 + loss_cps_unlab2)
+            loss = (
+                loss_sup1
+                + loss_sup2
+                + lamb
+                * (loss_cps_lab1 + loss_cps_lab2 + loss_cps_unlab1 + loss_cps_unlab2)
+            )
             # accuracy is only computed on labeled pixels
             acc1 = (
                 ((lab_logits1[labeled_pixels] > 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
-            ) 
-            acc2 =(
+            )
+            acc2 = (
                 ((lab_logits2[labeled_pixels] > 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
