@@ -6,6 +6,7 @@ import torchvision
 import torchvision.transforms.functional as TF
 from torchvision.datasets import OxfordIIITPet
 from torch.utils.data import DataLoader
+import math
 
 
 # normalizing constants (mean, std) for datasets
@@ -84,11 +85,11 @@ def create_datasets(root="/tmp/adl_data", valid_frac=0.2, labelled_frac=0.125):
     train_all_ds, valid_ds = torch.utils.data.random_split(
         trainval_ds, (1 - valid_frac, valid_frac), generator=rng
     )
-    _, train_lab_ds = torch.utils.data.random_split(
+    train_unlab_ds, train_lab_ds = torch.utils.data.random_split(
         train_all_ds, (1 - labelled_frac, labelled_frac), generator=rng
     )
 
-    return train_all_ds, train_lab_ds, valid_ds
+    return train_all_ds, train_lab_ds, train_unlab_ds, valid_ds, test_ds
 
 
 def create_dataloaders(batch_size=8, image_size=224, *args, **kwargs):
