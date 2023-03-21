@@ -33,7 +33,7 @@ def visualize_predictions(images, logits, filename):
 
 
 
-def cutmix(input, target, alpha=1.0):
+def cutmix(input, target=[], alpha=1.0):
     """generate the CutMix versions of the input and target data
     Paper: https://arxiv.org/pdf/1905.04899.pdf
 
@@ -43,10 +43,10 @@ def cutmix(input, target, alpha=1.0):
         alpha: the alpha value for the beta distribution
 
     Returns:
-        input: the cutmix input data
+        mix_input: the cutmix input data
         target_a: the target data A
         target_b: the target data B
-        lam: the lambda value
+        mask: the mask used to cutmix the input data
     """
 
     # initialise lambda
@@ -57,9 +57,6 @@ def cutmix(input, target, alpha=1.0):
 
     # generate a random list of indices with size of the batch size
     rand_idx = torch.randperm(batch_size)
-
-    # assign target_a and target_b
-    target_a, target_b = target, target[rand_idx]
 
     # get the width and height of the input image
     W, H = input.shape[2], input.shape[3]
@@ -76,29 +73,62 @@ def cutmix(input, target, alpha=1.0):
     x2 = torch.clamp(cx + cut_w//2, 0, W)
     y2 = torch.clamp(cy + cut_w//2, 0, H)
 
-    input[:, :, x1:x2, y1:y2] = input[rand_idx][:, :, x1:x2, y1:y2]
+    # apply the mask to the input data and save to mix_input
+    input_a = input
+    input_b = input[rand_idx]
+    mix_input = input.clone()
+    mix_input[:, :, x1:x2, y1:y2] = input_b[:, :, x1:x2, y1:y2]
 
     # adjust lambda to the exact area ratio
-    lam = 1 - ((x2 - x1) * (y2 - y1) / (W * H))
+    # lam = 1 - ((x2 - x1) * (y2 - y1) / (W * H))
 
-    return input, target_a, target_b, lam
+    # save the mask
+    mask = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
+
+    # assign target_a and target_b
+    if len(target)>0:
+        target_a, target_b = target, target[rand_idx]
+        return mix_input, input_a, input_b, target_a, target_b, mask
+
+    else:
+        return mix_input, input_a, input_b, None, None, mask
 
 
-def cutmix_criterion(criterion, output, target_a, target_b, lam):
-    """compute the cutmix loss
+def apply_cutmix_mask_to_output(output_a, output_b, mask):
+    """apply the cutmix mask to the output data
 
     Args:
-        criterion: the loss function to use
-        output: the model output
-        target_a: the target data A (output of the cutmix function)
-        target_b: the target data B (output of the cutmix function)
-        lam: the lambda value (output of the cutmix function)
+        output_a: the output A
+        output_b: the output B
+        mask: the mask to apply
 
     Returns:
-        loss: the cutmix loss
+        mix_output: the cutmix input data
     """
 
-    loss = lam * criterion(output, target_a) + (1 - lam) * criterion(output, target_b)
+    x1, x2, y1, y2 = mask["x1"], mask["x2"], mask["y1"], mask["y2"]
+
+    # apply the mask to the output and save to mix_output
+    mix_output = output_a.clone()
+    mix_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
+
+    return mix_output
+
+# def cutmix_criterion(criterion, output, target_a, target_b, lam):
+#     """compute the cutmix loss
+
+#     Args:
+#         criterion: the loss function to use
+#         output: the model output
+#         target_a: the target data A (output of the cutmix function)
+#         target_b: the target data B (output of the cutmix function)
+#         lam: the lambda value (output of the cutmix function)
+
+#     Returns:
+#         loss: the cutmix loss
+#     """
+
+#     loss = lam * criterion(output, target_a) + (1 - lam) * criterion(output, target_b)
     
-    return loss
+#     return loss
         
