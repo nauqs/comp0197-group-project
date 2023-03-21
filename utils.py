@@ -32,7 +32,7 @@ def visualize_predictions(images, logits, filename):
     torchvision.io.write_jpeg(image_grid, filename)
 
 
-def cutmix(input, target=[], alpha=1.0):
+def cutmix(inputs, target=[], alpha=1.0):
     """generate the CutMix versions of the input and target data
     Paper: https://arxiv.org/pdf/1905.04899.pdf
     Args:
@@ -50,13 +50,13 @@ def cutmix(input, target=[], alpha=1.0):
     lam = torch.distributions.beta.Beta(alpha, alpha).sample()
 
     # find the batch size from input data
-    batch_size = len(target)
+    batch_size = len(inputs)
 
     # generate a random list of indices with size of the batch size
     rand_idx = torch.randperm(batch_size)
 
     # get the width and height of the input image
-    W, H = input.shape[2], input.shape[3]
+    W, H = inputs.shape[2], inputs.shape[3]
 
     cx = torch.randint(W, (1,)).item()
     cy = torch.randint(H, (1,)).item()
@@ -71,9 +71,9 @@ def cutmix(input, target=[], alpha=1.0):
     y2 = torch.clamp(cy + cut_w//2, 0, H)
 
     # apply the mask to the input data and save to mix_input
-    input_a = input
-    input_b = input[rand_idx]
-    mix_input = input.clone()
+    input_a = inputs
+    input_b = inputs[rand_idx]
+    mix_input = inputs.clone()
     mix_input[:, :, x1:x2, y1:y2] = input_b[:, :, x1:x2, y1:y2]
 
     # adjust lambda to the exact area ratio
