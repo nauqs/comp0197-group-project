@@ -1,5 +1,12 @@
+# Ignore cache files
 __pycache__
 .DS_Store
 .ipynb_checkpoints
-weights
 *.egg-info
+
+# Ignore the directories of the data set
+data/annotations
+data/images
+
+# Others
+weights
