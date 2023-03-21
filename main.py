@@ -19,11 +19,12 @@ if __name__ == "__main__":
         train_unlab_dl,
         valid_dl,
         test_dl,
-    ) = datasets.create_dataloaders(batch_size=8)
+    ) = datasets.create_dataloaders(batch_size=6)
 
     # TODO: add some cli arguments to control what to train, currently hardcoded
     train_supervised = False
-    train_semi_supervised = True
+    train_semi_supervised = False
+    train_semi_supervised_cutmix = True
 
     if train_supervised:
         # initialize model
@@ -65,6 +66,32 @@ if __name__ == "__main__":
         images, labels = next(iter(valid_dl))
         images, labels = images[:8].to(device), labels[:8].to(device)
         logits1 = model1(images)["out"][:, 0]
-        utils.visualize_predictions(images, logits1, "plots/predictions.jpg")
+        utils.visualize_predictions(images, logits1, "plots/semisup-predictions1.jpg")
         logits2 = model2(images)["out"][:, 0]
-        utils.visualize_predictions(images, logits2, "plots/predictions.jpg")
+        utils.visualize_predictions(images, logits2, "plots/semisup-predictions2.jpg")
+
+    elif train_semi_supervised_cutmix:
+        # initialize model
+        print("Training semi-supervised cutmix")
+        print("Labeled data: ", len(train_lab_dl.dataset))
+        model1 = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
+        model2 = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
+        model1 = model1.to(device)
+        model2 = model2.to(device)
+        # train
+        model1, model2 = train.train_semi_supervised_cutmix(
+            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10
+        )
+
+        # save model
+        Path("weights").mkdir(parents=True, exist_ok=True)
+        torch.save(model1.state_dict(), "weights/semi-supervised-cutmix1.pt")
+        torch.save(model2.state_dict(), "weights/semi-supervised-cutmix2.pt")
+
+        # visualize predictions
+        images, labels = next(iter(valid_dl))
+        images, labels = images[:8].to(device), labels[:8].to(device)
+        logits1 = model1(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits1, "plots/cutmix_predictions1.jpg")
+        logits2 = model2(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits2, "plots/cutmix_predictions2.jpg")
