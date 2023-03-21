@@ -60,15 +60,15 @@ def cutmix(inputs, target=[], alpha=1.0):
 
     cx = torch.randint(W, (1,)).item()
     cy = torch.randint(H, (1,)).item()
-    r_w = torch.sqrt(1.-lam)
-    r_h = torch.sqrt(1.-lam)
+    r_w = torch.sqrt(1.0 - lam)
+    r_h = torch.sqrt(1.0 - lam)
     cut_w = (W * r_w).int()
     cut_h = (H * r_h).int()
 
-    x1 = torch.clamp(cx - cut_w//2, 0, W).to(device)
-    y1 = torch.clamp(cy - cut_h//2, 0, H).to(device)
-    x2 = torch.clamp(cx + cut_w//2, 0, W).to(device)
-    y2 = torch.clamp(cy + cut_w//2, 0, H).to(device)
+    x1 = torch.clamp(cx - cut_w // 2, 0, W).to(device)
+    y1 = torch.clamp(cy - cut_h // 2, 0, H).to(device)
+    x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
+    y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
 
     # apply the mask to the input data and save to mix_input
     input_a = inputs
@@ -83,7 +83,7 @@ def cutmix(inputs, target=[], alpha=1.0):
     mask = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
 
     # assign target_a and target_b
-    if len(target)>0:
+    if len(target) > 0:
         target_a, target_b = target, target[rand_idx]
         return mix_input, input_a, input_b, target_a, target_b, mask
 
@@ -108,22 +108,3 @@ def apply_cutmix_mask_to_output(output_a, output_b, mask):
     mix_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
 
     return mix_output
-
-# def cutmix_criterion(criterion, output, target_a, target_b, lam):
-#     """compute the cutmix loss
-
-#     Args:
-#         criterion: the loss function to use
-#         output: the model output
-#         target_a: the target data A (output of the cutmix function)
-#         target_b: the target data B (output of the cutmix function)
-#         lam: the lambda value (output of the cutmix function)
-
-#     Returns:
-#         loss: the cutmix loss
-#     """
-
-#     loss = lam * criterion(output, target_a) + (1 - lam) * criterion(output, target_b)
-    
-#     return loss
-        

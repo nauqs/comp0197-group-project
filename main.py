@@ -19,7 +19,7 @@ if __name__ == "__main__":
         train_unlab_dl,
         valid_dl,
         test_dl,
-    ) = datasets.create_dataloaders(batch_size=8)
+    ) = datasets.create_dataloaders(batch_size=6)
 
     # TODO: add some cli arguments to control what to train, currently hardcoded
     train_supervised = False

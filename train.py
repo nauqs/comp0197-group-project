@@ -210,7 +210,6 @@ def train_semi_supervised(
     return model1, model2
 
 
-
 def train_semi_supervised_cutmix(
     model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=0.5
 ):
@@ -247,24 +246,20 @@ def train_semi_supervised_cutmix(
         # iterate over batches of labeled data
         n_batches = len(train_lab_dl)
         for images, labels in train_lab_dl:
-
             images, labels = images.to(device), labels.to(device)
-
-            # mix_images, images_a, images_b, labels_a, labels_b, labeled_mask = utils.cutmix(images, labels)
-
-            # #move cutmix_images, cutmix_labels_a, cutmix_labels_b, labeled_mask to device
-            # mix_images = mix_images.to(device)
-            # images_a = images_a.to(device)
-            # images_b = images_b.to(device)
-            # labels_a = labels_a.to(device)
-            # labels_b = labels_b.to(device)
-            # labeled_mask = labeled_mask.to(device)
 
             unlabeled_images, _ = next(unlabeled_images_iter)
             unlabeled_images = unlabeled_images.to(device)
 
             # cutmix the unlabeled images
-            mix_unlab_images, unlab_images_a, unlab_images_b, _, _, unlab_mask = utils.cutmix(unlabeled_images)
+            (
+                mix_unlab_images,
+                unlab_images_a,
+                unlab_images_b,
+                _,
+                _,
+                unlab_mask,
+            ) = utils.cutmix(unlabeled_images)
 
             # get a mask of labeled pixels (foreground/background)
             labeled_pixels = labels != 2
@@ -287,15 +282,19 @@ def train_semi_supervised_cutmix(
             unlab_logits2_images_a = model2(unlab_images_a)["out"][:, 0]
             unlab_logits2_images_b = model2(unlab_images_b)["out"][:, 0]
 
-            unlab_target1_cutmix = utils.apply_cutmix_mask_to_output(unlab_logits1_images_a, unlab_logits1_images_b, unlab_mask)
-            unlab_target2_cutmix = utils.apply_cutmix_mask_to_output(unlab_logits2_images_a, unlab_logits2_images_b, unlab_mask)
+            unlab_target1_cutmix = utils.apply_cutmix_mask_to_output(
+                unlab_logits1_images_a, unlab_logits1_images_b, unlab_mask
+            )
+            unlab_target2_cutmix = utils.apply_cutmix_mask_to_output(
+                unlab_logits2_images_a, unlab_logits2_images_b, unlab_mask
+            )
 
             # Step 2: get predicted labels for cut-mix images in both models
             unlab_logits1_cutmix = model1(mix_unlab_images)["out"][:, 0]
             unlab_logits2_cutmix = model2(mix_unlab_images)["out"][:, 0]
             unlab_preds1_cutmix = (unlab_logits1_cutmix > 0.5).detach().clone()
             unlab_preds2_cutmix = (unlab_logits2_cutmix > 0.5).detach().clone()
-            
+
             # compute losses
             loss_sup1 = F.binary_cross_entropy_with_logits(
                 lab_logits1[labeled_pixels], labels[labeled_pixels].float()
