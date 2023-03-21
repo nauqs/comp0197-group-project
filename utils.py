@@ -6,7 +6,7 @@ import numpy as np
 
 
 def unnormalize_images(images):
-    mean, std = torch.tensor(datasets.DS_STATS["classification"])
+    mean, std = torch.tensor(datasets.DS_STATS["classification"], device=images.device)
     images = images * std[None, :, None, None] + mean[None, :, None, None]
     return images.clip(0, 1)
 
@@ -32,16 +32,13 @@ def visualize_predictions(images, logits, filename):
     torchvision.io.write_jpeg(image_grid, filename)
 
 
-
 def cutmix(input, target=[], alpha=1.0):
     """generate the CutMix versions of the input and target data
     Paper: https://arxiv.org/pdf/1905.04899.pdf
-
     Args:
         input: the input data
         target: the target data
         alpha: the alpha value for the beta distribution
-
     Returns:
         mix_input: the cutmix input data
         target_a: the target data A
@@ -96,12 +93,10 @@ def cutmix(input, target=[], alpha=1.0):
 
 def apply_cutmix_mask_to_output(output_a, output_b, mask):
     """apply the cutmix mask to the output data
-
     Args:
         output_a: the output A
         output_b: the output B
         mask: the mask to apply
-
     Returns:
         mix_output: the cutmix input data
     """
