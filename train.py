@@ -266,11 +266,6 @@ def train_semi_supervised_cutmix(
             # cutmix the unlabeled images
             mix_unlab_images, unlab_images_a, unlab_images_b, _, _, unlab_mask = utils.cutmix(unlabeled_images)
 
-            mix_unlab_images = mix_unlab_images.to(device)
-            unlab_images_a = unlab_images_a.to(device)
-            unlab_images_b = unlab_images_b.to(device)
-            unlab_mask = unlab_mask.to(device)
-
             # get a mask of labeled pixels (foreground/background)
             labeled_pixels = labels != 2
             # zero gradients

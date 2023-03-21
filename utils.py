@@ -45,7 +45,7 @@ def cutmix(inputs, target=[], alpha=1.0):
         target_b: the target data B
         mask: the mask used to cutmix the input data
     """
-
+    device = inputs.device
     # initialise lambda
     lam = torch.distributions.beta.Beta(alpha, alpha).sample()
 
@@ -65,15 +65,15 @@ def cutmix(inputs, target=[], alpha=1.0):
     cut_w = (W * r_w).int()
     cut_h = (H * r_h).int()
 
-    x1 = torch.clamp(cx - cut_w//2, 0, W)
-    y1 = torch.clamp(cy - cut_h//2, 0, H)
-    x2 = torch.clamp(cx + cut_w//2, 0, W)
-    y2 = torch.clamp(cy + cut_w//2, 0, H)
+    x1 = torch.clamp(cx - cut_w//2, 0, W).to(device)
+    y1 = torch.clamp(cy - cut_h//2, 0, H).to(device)
+    x2 = torch.clamp(cx + cut_w//2, 0, W).to(device)
+    y2 = torch.clamp(cy + cut_w//2, 0, H).to(device)
 
     # apply the mask to the input data and save to mix_input
     input_a = inputs
     input_b = inputs[rand_idx]
-    mix_input = inputs.clone()
+    mix_input = inputs.clone().to(device)
     mix_input[:, :, x1:x2, y1:y2] = input_b[:, :, x1:x2, y1:y2]
 
     # adjust lambda to the exact area ratio
