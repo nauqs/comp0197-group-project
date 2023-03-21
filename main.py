@@ -19,7 +19,7 @@ if __name__ == "__main__":
         train_unlab_dl,
         valid_dl,
         test_dl,
-    ) = datasets.create_dataloaders(batch_size=32)
+    ) = datasets.create_dataloaders(batch_size=8)
 
     # TODO: add some cli arguments to control what to train, currently hardcoded
     train_supervised = False
@@ -27,28 +27,44 @@ if __name__ == "__main__":
 
     if train_supervised:
         # initialize model
+        print("Training supervised")
+        print("Labeled data: ", len(train_lab_dl.dataset))
         model = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
         model = model.to(device)
         # train
-        train.train_supervised(model, train_lab_dl, valid_dl, epochs=10)
+        model = train.train_supervised(model, train_lab_dl, valid_dl, epochs=10)
+
+        # save model
+        Path("weights").mkdir(parents=True, exist_ok=True)
+        torch.save(model.state_dict(), "weights/supervised.pt")
+        # visualize predictions
+        images, labels = next(iter(valid_dl))
+        images, labels = images[:8].to(device), labels[:8].to(device)
+        logits = model(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits, "plots/predictions.jpg")
 
     elif train_semi_supervised:
         # initialize model
+        print("Training semi-supervised")
+        print("Labeled data: ", len(train_lab_dl.dataset))
         model1 = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
         model2 = models.load_deeplab(use_imagenet_weights=True, large_resnet=False)
         model1 = model1.to(device)
         model2 = model2.to(device)
         # train
-        train.train_semi_supervised(
+        model1, model2 = train.train_semi_supervised(
             model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10
         )
 
-    # save model
-    Path("weights").mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), "weights/supervised.pt")
+        # save model
+        Path("weights").mkdir(parents=True, exist_ok=True)
+        torch.save(model1.state_dict(), "weights/semi-supervised1.pt")
+        torch.save(model2.state_dict(), "weights/semi-supervised2.pt")
 
-    # visualize predictions
-    images, labels = next(iter(valid_dl))
-    images, labels = images[:8].to(device), labels[:8].to(device)
-    logits = model(images)["out"][:, 0]
-    utils.visualize_predictions(images, logits, "plots/predictions.jpg")
+        # visualize predictions
+        images, labels = next(iter(valid_dl))
+        images, labels = images[:8].to(device), labels[:8].to(device)
+        logits1 = model1(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits1, "plots/predictions.jpg")
+        logits2 = model2(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits2, "plots/predictions.jpg")

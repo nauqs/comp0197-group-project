@@ -6,7 +6,7 @@ import numpy as np
 
 
 def unnormalize_images(images):
-    mean, std = torch.tensor(datasets.DS_STATS["classification"])
+    mean, std = torch.tensor(datasets.DS_STATS["classification"], device=images.device)
     images = images * std[None, :, None, None] + mean[None, :, None, None]
     return images.clip(0, 1)
 
@@ -30,7 +30,6 @@ def visualize_predictions(images, logits, filename):
     # save image to disk
     image_grid = (255 * image_grid).to(torch.uint8).cpu()
     torchvision.io.write_jpeg(image_grid, filename)
-
 
 
 def cutmix(input, target, alpha=1.0):
@@ -66,15 +65,15 @@ def cutmix(input, target, alpha=1.0):
 
     cx = torch.randint(W, (1,)).item()
     cy = torch.randint(H, (1,)).item()
-    r_w = torch.sqrt(1.-lam)
-    r_h = torch.sqrt(1.-lam)
+    r_w = torch.sqrt(1.0 - lam)
+    r_h = torch.sqrt(1.0 - lam)
     cut_w = (W * r_w).int()
     cut_h = (H * r_h).int()
 
-    x1 = torch.clamp(cx - cut_w//2, 0, W)
-    y1 = torch.clamp(cy - cut_h//2, 0, H)
-    x2 = torch.clamp(cx + cut_w//2, 0, W)
-    y2 = torch.clamp(cy + cut_w//2, 0, H)
+    x1 = torch.clamp(cx - cut_w // 2, 0, W)
+    y1 = torch.clamp(cy - cut_h // 2, 0, H)
+    x2 = torch.clamp(cx + cut_w // 2, 0, W)
+    y2 = torch.clamp(cy + cut_w // 2, 0, H)
 
     input[:, :, x1:x2, y1:y2] = input[rand_idx][:, :, x1:x2, y1:y2]
 
@@ -99,6 +98,5 @@ def cutmix_criterion(criterion, output, target_a, target_b, lam):
     """
 
     loss = lam * criterion(output, target_a) + (1 - lam) * criterion(output, target_b)
-    
+
     return loss
-        

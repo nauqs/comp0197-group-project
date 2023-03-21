@@ -27,5 +27,13 @@ To train in Colab:
 - create a new Google Colab notebook
 - in the Colab menu bar, click Runtime -> Change runtime type -> Hardware accelerator -> GPU
 - go to files, click Mount Google Drive
-- change your working directory to this repository (using ```os.chdir```)
+- change your working directory to this repository 
+    (using ```os.chdir``` or ```%cd path/to/comp0197-group-project/```)
+- to install the dependencies, you can run the following:
+    ```
+    !pip install -q condacolab
+    import condacolab
+    condacolab.install()
+    !conda install -c  pytorch python=3.9 pytorch=1.13 torchvision=0.14
+    ```
 - run ```! python main.py```

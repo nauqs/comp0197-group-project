@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from time import time
+from itertools import cycle
 
 
 @torch.no_grad()
@@ -91,7 +92,7 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
 
 
 def train_semi_supervised(
-    model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=6
+    model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=1.5
 ):
     """
     Trains a segmentation model.
@@ -107,12 +108,16 @@ def train_semi_supervised(
     device = next(model1.parameters()).device
 
     # set optimizer to optimise both models
-    optimizer = torch.optim.Adam([*model1.parameters(), *model2.parameters()], lr=lr)
+    params = list(model1.parameters()) + list(model2.parameters())
+    optimizer = torch.optim.Adam(params, lr=lr)
 
     # iterable for unlabeled images
     # we will need to sample a few with every labeled batch
-    # if there are more labeled than unlabeled, we will need to loop around, hence the iter
-    unlabeled_images_iter = iter(train_unlab_dl)
+    # if there are more labeled than unlabeled, we will need to loop around, hence the cycle
+    unlabeled_images_iter = cycle(train_unlab_dl)
+    print(
+        f"Using {train_unlab_dl.batch_size} unlabeled images per labeled batch of {train_lab_dl.batch_size}."
+    )
 
     # iterate over epochs
     for epoch in range(epochs):
@@ -126,16 +131,10 @@ def train_semi_supervised(
         n_batches = len(train_lab_dl)
         for images, labels in train_lab_dl:
             images, labels = images.to(device), labels.to(device)
-            try:
-                # give next batch if we have more left
-                # don't pick up labels
-                unlabeled_images, _ = next(unlabeled_images_iter)
-                unlabeled_images = images.to(device)
-            except StopIteration:
-                # we ran out of unlabeled, restart the loop
-                # this only happens if there are more labeled than unlabeled, or batches are unequal
-                unlabeled_images_iter = iter(train_unlab_dl)
-                unlabeled_images = next(unlabeled_images_iter).to(device)
+            # give next batch if we have more left
+            # don't even pick up labels
+            unlabeled_images, _ = next(unlabeled_images_iter)
+            unlabeled_images = unlabeled_images.to(device)
 
             # get a mask of labeled pixels (foreground/background)
             labeled_pixels = labels != 2
@@ -152,7 +151,7 @@ def train_semi_supervised(
             lab_preds1 = (lab_logits1 > 0.5).detach().clone()
             lab_preds2 = (lab_logits2 > 0.5).detach().clone()
             unlab_preds1 = (unlab_logits1 > 0.5).detach().clone()
-            unlab_preds2 = (lab_logits2 > 0.5).detach().clone()
+            unlab_preds2 = (unlab_logits2 > 0.5).detach().clone()
 
             # compute losses
             loss_sup1 = F.binary_cross_entropy_with_logits(
