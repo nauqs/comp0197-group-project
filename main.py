@@ -2,7 +2,7 @@ import time
 import torch
 import datasets
 import models
-import train_v2 as train
+import train
 import utils
 from pathlib import Path
 from tqdm import tqdm
