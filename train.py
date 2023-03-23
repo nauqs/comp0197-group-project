@@ -6,6 +6,46 @@ from itertools import cycle
 
 
 @torch.no_grad()
+def iou_eval(logits,labels,labeled_pixels):
+
+    smooth = 1e-10
+
+    # foreground
+    predicted_labels_1 = (logits[labeled_pixels] > 0) == 0
+    true_labels_1 = labels[labeled_pixels] == 0
+
+    # # background
+    predicted_labels_2 = (logits[labeled_pixels] <0) == 0
+    true_labels_2 = labels[labeled_pixels] == 1
+
+    iou_1 = ((predicted_labels_1 & true_labels_1).sum()+smooth)/((predicted_labels_1 | true_labels_1).sum()+smooth)
+    iou_2 = ((predicted_labels_2 & true_labels_2).sum()+smooth)/((predicted_labels_2 | true_labels_2).sum()+smooth)
+
+    # mean IoU
+    iou = (iou_1 + iou_2)/2
+
+    return iou
+
+@torch.no_grad()
+def dice_eval(logits,labels,labeled_pixels):
+
+    # foreground
+    predicted_labels_1 = (logits[labeled_pixels] > 0) == 0
+    true_labels_1 = labels[labeled_pixels] == 0
+
+    # background
+    predicted_labels_2 = (logits[labeled_pixels] <0) == 0
+    true_labels_2 = labels[labeled_pixels] == 1
+
+    dice_1 = 2*(predicted_labels_1 & true_labels_1).sum()/((predicted_labels_1 | true_labels_1).sum()+(predicted_labels_1 & true_labels_1).sum())
+    dice_2 = 2*(predicted_labels_2 & true_labels_2).sum()/((predicted_labels_2 | true_labels_2).sum()+(predicted_labels_2 & true_labels_2).sum())
+
+    # mean IoU
+    dice = (dice_1 + dice_2)/2
+
+    return dice
+
+@torch.no_grad()
 def eval(model, dataloader):
     """
     Evaluates model loss and accuracy over one epoch.
@@ -13,6 +53,8 @@ def eval(model, dataloader):
     device = next(model.parameters()).device
     epoch_loss = 0
     epoch_acc = 0
+    epoch_iou = 0
+    epoch_dice = 0
 
     # iterate over batches
     n_batches = len(dataloader)
@@ -29,11 +71,18 @@ def eval(model, dataloader):
         loss = F.binary_cross_entropy_with_logits(
             logits[labeled_pixels], labels[labeled_pixels].float()
         )
-        acc = ((logits[labeled_pixels] > 0.5) == labels[labeled_pixels]).float().mean()
+        acc = ((logits[labeled_pixels] > 0) == labels[labeled_pixels]).float().mean()
+
+        # compute iou and dice metrics
+        iou = iou_eval(logits,labels,labeled_pixels)
+        dice = dice_eval(logits,labels,labeled_pixels)
+
         epoch_loss += loss.item() / n_batches
         epoch_acc += acc.item() / n_batches
+        epoch_iou += iou.item() / n_batches
+        epoch_dice += dice.item() / n_batches
 
-    return epoch_loss, epoch_acc
+    return epoch_loss, epoch_acc, epoch_iou, epoch_dice
 
 
 def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
@@ -53,6 +102,8 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
         t = time()
         train_loss = 0
         train_acc = 0
+        train_iou = 0
+        train_dice = 0
 
         # iterate over batches
         n_batches = len(train_lab_dl)
@@ -72,21 +123,24 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
             loss = F.binary_cross_entropy_with_logits(
                 logits[labeled_pixels], labels[labeled_pixels].float()
             )
-            acc = (
-                ((logits[labeled_pixels] > 0.5) == labels[labeled_pixels])
-                .float()
-                .mean()
-            )
+            acc = ((logits[labeled_pixels] > 0) == labels[labeled_pixels]).float().mean()
+            
+            # compute iou and dice metrics
+            iou = iou_eval(logits,labels,labeled_pixels)
+            dice = dice_eval(logits,labels,labeled_pixels)
+
             loss.backward()
             optimizer.step()
             train_loss += loss.item() / n_batches
             train_acc += acc.item() / n_batches
+            train_iou += iou.item() /n_batches
+            train_dice += dice.item() / n_batches
 
         # print statistics
-        val_loss, val_acc = eval(model, valid_dl)
+        val_loss, val_acc,val_iou,val_dice = eval(model, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
         print(
-            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}"
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%},{train_iou=:4.2%}, {train_dice=:4.2%}, {val_acc=:4.2%}, {val_iou=:4.2%}, {val_dice=:4.2%}"
         )
 
     return model
@@ -127,6 +181,10 @@ def train_semi_supervised(
         train_loss = 0
         train_acc1 = 0
         train_acc2 = 0
+        train_iou1 = 0 
+        train_iou2 = 0
+        train_dice1 = 0
+        train_dice2 = 0
 
         # iterate over batches of labeled data
         n_batches = len(train_lab_dl)
@@ -149,10 +207,10 @@ def train_semi_supervised(
             unlab_logits1 = model1(unlabeled_images)["out"][:, 0]
             unlab_logits2 = model2(unlabeled_images)["out"][:, 0]
             # stop gradient for predictions
-            lab_preds1 = (lab_logits1 > 0.5).detach().clone()
-            lab_preds2 = (lab_logits2 > 0.5).detach().clone()
-            unlab_preds1 = (unlab_logits1 > 0.5).detach().clone()
-            unlab_preds2 = (unlab_logits2 > 0.5).detach().clone()
+            lab_preds1 = (lab_logits1 > 0).detach().clone()
+            lab_preds2 = (lab_logits2 > 0).detach().clone()
+            unlab_preds1 = (unlab_logits1 > 0).detach().clone()
+            unlab_preds2 = (unlab_logits2 > 0).detach().clone()
 
             # compute losses
             loss_sup1 = F.binary_cross_entropy_with_logits(
@@ -184,27 +242,44 @@ def train_semi_supervised(
             )
             # accuracy is only computed on labeled pixels
             acc1 = (
-                ((lab_logits1[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                ((lab_logits1[labeled_pixels] > 0) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
             acc2 = (
-                ((lab_logits2[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                ((lab_logits2[labeled_pixels] > 0) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
+
+            # compute IoU metric for both models
+            iou1 = iou_eval(lab_logits1,labels,labeled_pixels)
+            iou2 = iou_eval(lab_logits2,labels,labeled_pixels)
+
+            # compute dice metric for both models
+            dice1 = dice_eval(lab_logits1,labels,labeled_pixels)
+            dice2 = dice_eval(lab_logits2,labels,labeled_pixels)
+
+
+
+            # compute dice
+
             loss.backward()
             optimizer.step()
             train_loss += loss.item() / n_batches
             train_acc1 += acc1.item() / n_batches
             train_acc2 += acc2.item() / n_batches
+            train_iou1 += iou1.item() / n_batches
+            train_iou2 += iou2.item() / n_batches
+            train_dice1 += dice1.item() / n_batches
+            train_dice2 += dice2.item() / n_batches
 
         # print statistics
-        val_loss1, val_acc1 = eval(model1, valid_dl)
-        val_loss2, val_acc2 = eval(model2, valid_dl)
+        val_loss1, val_acc1, val_iou1,val_dice1 = eval(model1, valid_dl)
+        val_loss2, val_acc2, val_iou2, val_dice2= eval(model2, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
         print(
-            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%}, {val_acc1=:4.2%}, {val_acc2=:4.2%}"
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%}, {train_iou1=:4.2%},{train_iou2=:4.2%}, {train_dice1=:4.2%}, {train_dice2=:4.2%} ,{val_acc1=:4.2%}, {val_acc2=:4.2%}, {val_iou1=:4.2%}, {val_iou2=:4.2%}, {val_dice1=:4.2%}, {val_dice2=:4.2%}"
         )
 
     return model1, model2
@@ -242,6 +317,10 @@ def train_semi_supervised_cutmix(
         train_loss = 0
         train_acc1 = 0
         train_acc2 = 0
+        train_iou1 = 0
+        train_iou2 = 0
+        train_dice1 = 0
+        train_dice2 = 0
 
         # iterate over batches of labeled data
         n_batches = len(train_lab_dl)
@@ -271,8 +350,8 @@ def train_semi_supervised_cutmix(
             lab_logits2 = model2(images)["out"][:, 0]
 
             # stop gradient for predictions
-            lab_preds1 = (lab_logits1 > 0.5).detach().clone()
-            lab_preds2 = (lab_logits2 > 0.5).detach().clone()
+            lab_preds1 = (lab_logits1 > 0).detach().clone()
+            lab_preds2 = (lab_logits2 > 0).detach().clone()
 
             # get model predictions for unlabeled data
 
@@ -292,8 +371,8 @@ def train_semi_supervised_cutmix(
             # Step 2: get predicted labels for cut-mix images in both models
             unlab_logits1_cutmix = model1(mix_unlab_images)["out"][:, 0]
             unlab_logits2_cutmix = model2(mix_unlab_images)["out"][:, 0]
-            unlab_preds1_cutmix = (unlab_logits1_cutmix > 0.5).detach().clone()
-            unlab_preds2_cutmix = (unlab_logits2_cutmix > 0.5).detach().clone()
+            unlab_preds1_cutmix = (unlab_logits1_cutmix > 0).detach().clone()
+            unlab_preds2_cutmix = (unlab_logits2_cutmix > 0).detach().clone()
 
             # compute losses
             loss_sup1 = F.binary_cross_entropy_with_logits(
@@ -325,27 +404,41 @@ def train_semi_supervised_cutmix(
             )
             # accuracy is only computed on labeled pixels
             acc1 = (
-                ((lab_logits1[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                ((lab_logits1[labeled_pixels] > 0) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
             acc2 = (
-                ((lab_logits2[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                ((lab_logits2[labeled_pixels] > 0) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
+
+            # compute IoU metric for both models
+            iou1 = iou_eval(lab_logits1,labels,labeled_pixels)
+            iou2 = iou_eval(lab_logits2,labels,labeled_pixels)
+
+            # compute the dice metric for both models
+            dice1 = dice_eval(lab_logits1,labels,labeled_pixels)
+            dice2 = dice_eval(lab_logits2,labels,labeled_pixels)
+
+
             loss.backward()
             optimizer.step()
             train_loss += loss.item() / n_batches
             train_acc1 += acc1.item() / n_batches
             train_acc2 += acc2.item() / n_batches
+            train_iou1 += iou1.item() / n_batches
+            train_iou2 += iou2.item() / n_batches
+            train_dice1 += dice1.item() / n_batches
+            train_dice2 += dice2.item() / n_batches
 
         # print statistics
-        val_loss1, val_acc1 = eval(model1, valid_dl)
-        val_loss2, val_acc2 = eval(model2, valid_dl)
+        val_loss1, val_acc1, val_iou1, val_dice1 = eval(model1, valid_dl)
+        val_loss2, val_acc2, val_iou2, val_dice2 = eval(model2, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
         print(
-            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%}, {val_acc1=:4.2%}, {val_acc2=:4.2%}"
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%},{train_iou1=:4.2%},{train_iou2=:4.2%}, {train_dice1=:4.2%}, {train_dice2=:4.2%}, {val_acc1=:4.2%}, {val_acc2=:4.2%},{val_iou1=:4.2%}, {val_iou2=:4.2%}, {val_dice1=:4.2%}, {val_dice2=:4.2%} "
         )
 
     return model1, model2
