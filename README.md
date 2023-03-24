@@ -36,4 +36,11 @@ To train in Colab:
     condacolab.install()
     !conda install -c  pytorch python=3.9 pytorch=1.13 torchvision=0.14
     ```
-- run ```! python main.py```
+- run ```! python main.py``` with required flags:
+  - The default model is the supervised one with no semi-supervised learning.
+  - Use ```--pseudo-label``` for semi-supervised learning
+  - Use ```--cutmix``` for cutmix augmentation, there is none by default 
+  - Use ```--large-resnet``` for Resnet101, Resnet50 is used by default
+  - Use ```--no-pretrained``` for no pretrained Resnet weights, we are loading them by default
+
+  - Run ```! python main.py -h``` for more information on the available flags.

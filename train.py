@@ -6,8 +6,7 @@ from itertools import cycle
 
 
 @torch.no_grad()
-def iou_eval(logits,labels,labeled_pixels):
-
+def iou_eval(logits, labels, labeled_pixels):
     smooth = 1e-10
 
     # foreground
@@ -15,35 +14,54 @@ def iou_eval(logits,labels,labeled_pixels):
     true_labels_1 = labels[labeled_pixels] == 0
 
     # # background
-    predicted_labels_2 = (logits[labeled_pixels] <0) == 0
+    predicted_labels_2 = (logits[labeled_pixels] < 0) == 0
     true_labels_2 = labels[labeled_pixels] == 1
 
-    iou_1 = ((predicted_labels_1 & true_labels_1).sum()+smooth)/((predicted_labels_1 | true_labels_1).sum()+smooth)
-    iou_2 = ((predicted_labels_2 & true_labels_2).sum()+smooth)/((predicted_labels_2 | true_labels_2).sum()+smooth)
+    iou_1 = ((predicted_labels_1 & true_labels_1).sum() + smooth) / (
+        (predicted_labels_1 | true_labels_1).sum() + smooth
+    )
+    iou_2 = ((predicted_labels_2 & true_labels_2).sum() + smooth) / (
+        (predicted_labels_2 | true_labels_2).sum() + smooth
+    )
 
     # mean IoU
-    iou = (iou_1 + iou_2)/2
+    iou = (iou_1 + iou_2) / 2
 
     return iou
 
-@torch.no_grad()
-def dice_eval(logits,labels,labeled_pixels):
 
+@torch.no_grad()
+def dice_eval(logits, labels, labeled_pixels):
     # foreground
     predicted_labels_1 = (logits[labeled_pixels] > 0) == 0
     true_labels_1 = labels[labeled_pixels] == 0
 
     # background
-    predicted_labels_2 = (logits[labeled_pixels] <0) == 0
+    predicted_labels_2 = (logits[labeled_pixels] < 0) == 0
     true_labels_2 = labels[labeled_pixels] == 1
 
-    dice_1 = 2*(predicted_labels_1 & true_labels_1).sum()/((predicted_labels_1 | true_labels_1).sum()+(predicted_labels_1 & true_labels_1).sum())
-    dice_2 = 2*(predicted_labels_2 & true_labels_2).sum()/((predicted_labels_2 | true_labels_2).sum()+(predicted_labels_2 & true_labels_2).sum())
+    dice_1 = (
+        2
+        * (predicted_labels_1 & true_labels_1).sum()
+        / (
+            (predicted_labels_1 | true_labels_1).sum()
+            + (predicted_labels_1 & true_labels_1).sum()
+        )
+    )
+    dice_2 = (
+        2
+        * (predicted_labels_2 & true_labels_2).sum()
+        / (
+            (predicted_labels_2 | true_labels_2).sum()
+            + (predicted_labels_2 & true_labels_2).sum()
+        )
+    )
 
     # mean IoU
-    dice = (dice_1 + dice_2)/2
+    dice = (dice_1 + dice_2) / 2
 
     return dice
+
 
 @torch.no_grad()
 def eval(model, dataloader):
@@ -74,8 +92,8 @@ def eval(model, dataloader):
         acc = ((logits[labeled_pixels] > 0) == labels[labeled_pixels]).float().mean()
 
         # compute iou and dice metrics
-        iou = iou_eval(logits,labels,labeled_pixels)
-        dice = dice_eval(logits,labels,labeled_pixels)
+        iou = iou_eval(logits, labels, labeled_pixels)
+        dice = dice_eval(logits, labels, labeled_pixels)
 
         epoch_loss += loss.item() / n_batches
         epoch_acc += acc.item() / n_batches
@@ -123,21 +141,23 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
             loss = F.binary_cross_entropy_with_logits(
                 logits[labeled_pixels], labels[labeled_pixels].float()
             )
-            acc = ((logits[labeled_pixels] > 0) == labels[labeled_pixels]).float().mean()
-            
+            acc = (
+                ((logits[labeled_pixels] > 0) == labels[labeled_pixels]).float().mean()
+            )
+
             # compute iou and dice metrics
-            iou = iou_eval(logits,labels,labeled_pixels)
-            dice = dice_eval(logits,labels,labeled_pixels)
+            iou = iou_eval(logits, labels, labeled_pixels)
+            dice = dice_eval(logits, labels, labeled_pixels)
 
             loss.backward()
             optimizer.step()
             train_loss += loss.item() / n_batches
             train_acc += acc.item() / n_batches
-            train_iou += iou.item() /n_batches
+            train_iou += iou.item() / n_batches
             train_dice += dice.item() / n_batches
 
         # print statistics
-        val_loss, val_acc,val_iou,val_dice = eval(model, valid_dl)
+        val_loss, val_acc, val_iou, val_dice = eval(model, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
         print(
             f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%},{train_iou=:4.2%}, {train_dice=:4.2%}, {val_acc=:4.2%}, {val_iou=:4.2%}, {val_dice=:4.2%}"
@@ -181,7 +201,7 @@ def train_semi_supervised(
         train_loss = 0
         train_acc1 = 0
         train_acc2 = 0
-        train_iou1 = 0 
+        train_iou1 = 0
         train_iou2 = 0
         train_dice1 = 0
         train_dice2 = 0
@@ -253,14 +273,12 @@ def train_semi_supervised(
             )
 
             # compute IoU metric for both models
-            iou1 = iou_eval(lab_logits1,labels,labeled_pixels)
-            iou2 = iou_eval(lab_logits2,labels,labeled_pixels)
+            iou1 = iou_eval(lab_logits1, labels, labeled_pixels)
+            iou2 = iou_eval(lab_logits2, labels, labeled_pixels)
 
             # compute dice metric for both models
-            dice1 = dice_eval(lab_logits1,labels,labeled_pixels)
-            dice2 = dice_eval(lab_logits2,labels,labeled_pixels)
-
-
+            dice1 = dice_eval(lab_logits1, labels, labeled_pixels)
+            dice2 = dice_eval(lab_logits2, labels, labeled_pixels)
 
             # compute dice
 
@@ -275,8 +293,8 @@ def train_semi_supervised(
             train_dice2 += dice2.item() / n_batches
 
         # print statistics
-        val_loss1, val_acc1, val_iou1,val_dice1 = eval(model1, valid_dl)
-        val_loss2, val_acc2, val_iou2, val_dice2= eval(model2, valid_dl)
+        val_loss1, val_acc1, val_iou1, val_dice1 = eval(model1, valid_dl)
+        val_loss2, val_acc2, val_iou2, val_dice2 = eval(model2, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
         print(
             f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%}, {train_iou1=:4.2%},{train_iou2=:4.2%}, {train_dice1=:4.2%}, {train_dice2=:4.2%} ,{val_acc1=:4.2%}, {val_acc2=:4.2%}, {val_iou1=:4.2%}, {val_iou2=:4.2%}, {val_dice1=:4.2%}, {val_dice2=:4.2%}"
@@ -415,13 +433,12 @@ def train_semi_supervised_cutmix(
             )
 
             # compute IoU metric for both models
-            iou1 = iou_eval(lab_logits1,labels,labeled_pixels)
-            iou2 = iou_eval(lab_logits2,labels,labeled_pixels)
+            iou1 = iou_eval(lab_logits1, labels, labeled_pixels)
+            iou2 = iou_eval(lab_logits2, labels, labeled_pixels)
 
             # compute the dice metric for both models
-            dice1 = dice_eval(lab_logits1,labels,labeled_pixels)
-            dice2 = dice_eval(lab_logits2,labels,labeled_pixels)
-
+            dice1 = dice_eval(lab_logits1, labels, labeled_pixels)
+            dice2 = dice_eval(lab_logits2, labels, labeled_pixels)
 
             loss.backward()
             optimizer.step()
