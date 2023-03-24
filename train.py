@@ -1,3 +1,4 @@
+import wandb
 import torch
 import torch.nn.functional as F
 from time import time
@@ -159,6 +160,7 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
         # print statistics
         val_loss, val_acc, val_iou, val_dice = eval(model, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
+        wandb.log({'epoch': epoch+1, 'time': epoch_time, 'train_loss': train_loss, 'train_acc': train_acc, 'train_iou': train_iou, 'train_dice': train_dice, 'val_loss': val_loss, 'val_acc': val_acc, 'val_iou': val_iou, 'val_dice': val_dice})
         print(
             f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%},{train_iou=:4.2%}, {train_dice=:4.2%}, {val_acc=:4.2%}, {val_iou=:4.2%}, {val_dice=:4.2%}"
         )
@@ -296,6 +298,7 @@ def train_semi_supervised(
         val_loss1, val_acc1, val_iou1, val_dice1 = eval(model1, valid_dl)
         val_loss2, val_acc2, val_iou2, val_dice2 = eval(model2, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
+        wandb.log({'epoch': epoch+1, 'time': epoch_time, 'train_loss': train_loss, 'train_acc1': train_acc1, 'train_acc2': train_acc2, 'train_iou1': train_iou1, 'train_iou2': train_iou2, 'train_dice1': train_dice1, 'train_dice2': train_dice2, 'val_loss1': val_loss1, 'val_acc1': val_acc1, 'val_iou1': val_iou1, 'val_dice1': val_dice1, 'val_loss2': val_loss2, 'val_acc2': val_acc2, 'val_iou2': val_iou2, 'val_dice2': val_dice2})
         print(
             f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%}, {train_iou1=:4.2%},{train_iou2=:4.2%}, {train_dice1=:4.2%}, {train_dice2=:4.2%} ,{val_acc1=:4.2%}, {val_acc2=:4.2%}, {val_iou1=:4.2%}, {val_iou2=:4.2%}, {val_dice1=:4.2%}, {val_dice2=:4.2%}"
         )
@@ -454,6 +457,7 @@ def train_semi_supervised_cutmix(
         val_loss1, val_acc1, val_iou1, val_dice1 = eval(model1, valid_dl)
         val_loss2, val_acc2, val_iou2, val_dice2 = eval(model2, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
+        wandb.log({'epoch': epoch+1, 'time': epoch_time, 'train_loss': train_loss, 'train_acc1': train_acc1, 'train_acc2': train_acc2, 'train_iou1': train_iou1, 'train_iou2': train_iou2, 'train_dice1': train_dice1, 'train_dice2': train_dice2, 'val_loss1': val_loss1, 'val_acc1': val_acc1, 'val_iou1': val_iou1, 'val_dice1': val_dice1, 'val_loss2': val_loss2, 'val_acc2': val_acc2, 'val_iou2': val_iou2, 'val_dice2': val_dice2})
         print(
             f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%},{train_iou1=:4.2%},{train_iou2=:4.2%}, {train_dice1=:4.2%}, {train_dice2=:4.2%}, {val_acc1=:4.2%}, {val_acc2=:4.2%},{val_iou1=:4.2%}, {val_iou2=:4.2%}, {val_dice1=:4.2%}, {val_dice2=:4.2%} "
         )
