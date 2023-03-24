@@ -112,7 +112,7 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
     and is only used for the supervised loss.
     """
     device = next(model.parameters()).device
-
+    wandb.config.update({'lr':lr})
     # set optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -183,7 +183,7 @@ def train_semi_supervised(
     """
 
     device = next(model1.parameters()).device
-
+    wandb.config.update({'lr':lr, 'lamb':lamb})
     # set optimizer to optimise both models
     params = list(model1.parameters()) + list(model2.parameters())
     optimizer = torch.optim.Adam(params, lr=lr)
@@ -319,6 +319,7 @@ def train_semi_supervised_cutmix(
     """
 
     device = next(model1.parameters()).device
+    wandb.config.update({'lr':lr, 'lamb':lamb})
     # set optimizer to optimise both models
     params = list(model1.parameters()) + list(model2.parameters())
     optimizer = torch.optim.Adam(params, lr=lr)
