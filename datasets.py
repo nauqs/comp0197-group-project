@@ -69,7 +69,7 @@ def load_dataset(root, split, size=224):
     return ds
 
 
-def create_datasets(root="/tmp/adl_data", valid_frac=0.2, labelled_frac=0.125):
+def create_datasets(root="/tmp/adl_data", valid_frac=0.2, labelled_frac=0.0625):
     """
     Returns:
     - train_all_ds: labeled and unlabeled training images

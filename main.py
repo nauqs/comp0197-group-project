@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument(
         "--pretrain",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=False,
         help="Whether to use pretrained weights",
     )
     parser.add_argument(
