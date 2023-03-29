@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument(
         "--pretrain",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=False,
         help="Whether to use pretrained weights",
     )
     parser.add_argument(
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     ) = datasets.create_dataloaders(batch_size=6)
 
     args = parse_args()
-    wandb.init(project="comp0197-group-project", group="comp0197-group-project")
+    wandb.init(project="comp0197-group-project", entity="comp0197-group-project", group="comp0197-group-project")
     wandb.config.update(args)
 
     if not args.pseudo_label:
