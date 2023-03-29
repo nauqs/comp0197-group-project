@@ -343,7 +343,7 @@ def train_semi_supervised(
             )
 
             acc_ensemble = (
-                ((lab_prob_ensemble> 0.5) == labels[labeled_pixels])
+                ((lab_prob_ensemble[labeled_pixels]> 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
@@ -539,17 +539,17 @@ def train_semi_supervised_cutmix(
             lab_prob_ensemble = (lab_probs1 + lab_probs2) / 2
             # accuracy is only computed on labeled pixels
             acc1 = (
-                ((lab_logits1[labeled_pixels] > 0) == labels[labeled_pixels])
+                ((lab_probs1[labeled_pixels] > 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
             acc2 = (
-                ((lab_logits2[labeled_pixels] > 0) == labels[labeled_pixels])
+                ((lab_probs2[labeled_pixels] > 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
             acc_ensemble = (
-                ((lab_prob_ensemble> 0.5) == labels[labeled_pixels])
+                ((lab_prob_ensemble[labeled_pixels] > 0.5) == labels[labeled_pixels])
                 .float()
                 .mean()
             )
