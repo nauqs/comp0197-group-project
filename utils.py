@@ -5,6 +5,14 @@ import datasets
 import numpy as np
 
 
+def model_config_to_name(config):
+    """
+    Given a model configuration dictionary
+    return a unique name for the model.
+    """
+    return '_'.join(f'{k}={v}' for k, v, in config.items())
+
+
 def unnormalize_images(images):
     mean, std = torch.tensor(datasets.DS_STATS["classification"], device=images.device)
     images = images * std[None, :, None, None] + mean[None, :, None, None]

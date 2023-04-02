@@ -244,7 +244,7 @@ def train_semi_supervised(
     """
 
     device = next(model1.parameters()).device
-    wandb.config.update({"lr": lr, "lamb": lamb})
+    wandb.config.update({"lr": lr})
     # set optimizer to optimise both models
     params = list(model1.parameters()) + list(model2.parameters())
     optimizer = torch.optim.Adam(params, lr=lr)
@@ -426,7 +426,7 @@ def train_semi_supervised_cutmix(
     """
 
     device = next(model1.parameters()).device
-    wandb.config.update({"lr": lr, "lamb": lamb})
+    wandb.config.update({"lr": lr})
     # set optimizer to optimise both models
     params = list(model1.parameters()) + list(model2.parameters())
     optimizer = torch.optim.Adam(params, lr=lr)
