@@ -37,7 +37,16 @@ def parse_args():
         default=False,
         help="Whether to use cutmix augmentation",
     )
+    parser.add_argument(
+        "--cutout",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Whether to use cutout augmentation",
+    )
     args = parser.parse_args()
+
+    assert sum([args.cutmix, args.cutout]) <= 1, "Only one augmentation can be used"
+
     return args
 
 
@@ -62,6 +71,10 @@ if __name__ == "__main__":
         if args.cutmix:
             raise NotImplementedError(
                 "CutMix is only implemented for semi-supervised training."
+            )
+        if args.cutout:
+            raise NotImplementedError(
+                "Cutout is only implemented for semi-supervised training."
             )
         # initialize model
         print("Training supervised")
@@ -141,3 +154,33 @@ if __name__ == "__main__":
         utils.visualize_predictions(images, logits1, "plots/cutmix_predictions1.jpg")
         logits2 = model2(images)["out"][:, 0]
         utils.visualize_predictions(images, logits2, "plots/cutmix_predictions2.jpg")
+
+    elif args.pseudo_label and args.cutout:
+        # initialize model
+        print("Training semi-supervised cutout")
+        print("Labeled data: ", len(train_lab_dl.dataset))
+        model1 = models.load_deeplab(
+            use_imagenet_weights=args.pretrain, large_resnet=args.large_resnet
+        )
+        model2 = models.load_deeplab(
+            use_imagenet_weights=args.pretrain, large_resnet=args.large_resnet
+        )
+        model1 = model1.to(device)
+        model2 = model2.to(device)
+        # train
+        model1, model2 = train.train_semi_supervised_cutout(
+            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10
+        )
+
+        # save model
+        Path("weights").mkdir(parents=True, exist_ok=True)
+        torch.save(model1.state_dict(), "weights/semi-supervised-cutout1.pt")
+        torch.save(model2.state_dict(), "weights/semi-supervised-cutout2.pt")
+
+        # visualize predictions
+        images, labels = next(iter(valid_dl))
+        images, labels = images[:8].to(device), labels[:8].to(device)
+        logits1 = model1(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits1, "plots/cutout_predictions1.jpg")
+        logits2 = model2(images)["out"][:, 0]
+        utils.visualize_predictions(images, logits2, "plots/cutout_predictions2.jpg")

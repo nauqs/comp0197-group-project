@@ -686,10 +686,10 @@ def train_semi_supervised_cutout(
             unlab_logits1_images = model1(unlab_images)["out"][:, 0]
             unlab_logits2_images = model2(unlab_images)["out"][:, 0]
 
-            unlab_target1_cutmix = utils.apply_cutmix_mask_to_output(
+            unlab_target1_cutout = utils.apply_cutout_mask_to_output(
                 unlab_logits1_images, unlab_mask
             )
-            unlab_target2_cutmix = utils.apply_cutmix_mask_to_output(
+            unlab_target2_cutout = utils.apply_cutout_mask_to_output(
                 unlab_logits2_images, unlab_mask
             )
 
@@ -700,8 +700,35 @@ def train_semi_supervised_cutout(
             unlab_preds2_cutout = (unlab_logits2_cutout > 0).detach().clone()
 
             # compute losses
-            # TODO
+            loss_sup1 = F.binary_cross_entropy_with_logits(
+                lab_logits1[labeled_pixels], labels[labeled_pixels].float()
+            )
+            loss_sup2 = F.binary_cross_entropy_with_logits(
+                lab_logits2[labeled_pixels], labels[labeled_pixels].float()
+            )
+
+            loss_cps_lab1 = F.binary_cross_entropy_with_logits(
+                lab_logits1, lab_preds2.float()
+            )
+            loss_cps_lab2 = F.binary_cross_entropy_with_logits(
+                lab_logits2, lab_preds1.float()
+            )
+
+            loss_cps_unlab1 = F.binary_cross_entropy_with_logits(
+                unlab_target1_cutout, unlab_preds2_cutout.float()
+            )
+            loss_cps_unlab2 = F.binary_cross_entropy_with_logits(
+                unlab_target2_cutout, unlab_preds1_cutout.float()
+            )
+
+            # TODO: check if this is correct
             loss = 0
+            loss = (
+                loss_sup1
+                + loss_sup2
+                + lamb
+                * (loss_cps_lab1 + loss_cps_lab2 + loss_cps_unlab1 + loss_cps_unlab2)
+            )
 
             lab_probs1 =  torch.sigmoid(lab_logits1)
             lab_probs2 =  torch.sigmoid(lab_logits2)
