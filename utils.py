@@ -81,8 +81,9 @@ def cutout(inputs, target=[], alpha=1.0):
 
     # assign target_a and target_b
     if len(target) > 0:
-        return cutout_input, inputs, None, target, None, mask
-
+        # target_b is dummy target
+        target_a, target_b = target, 2*np.ones_like(target)
+        return cutout_input, inputs, None, target_a, target_b, mask
     else:
         return cutout_input, inputs, None, None, None, mask
     
@@ -111,10 +112,11 @@ def mixup(inputs, target=[], alpha=1.0):
     input_a = inputs
     input_b = inputs[rand_idx]
     mix_input = (lam * input_a + (1 - lam) * input_b).to(device)
-
+    
     # assign target_a and target_b
     if len(target) > 0:
-        return mix_input, inputs, None, target, None, None
+        target_a, target_b = target, target[rand_idx]
+        return mix_input, inputs, None, target_a, target_b, None
 
     else:
         return mix_input, inputs, None, None, None, None
@@ -195,3 +197,20 @@ def apply_cutmix_mask_to_output(output_a, output_b, mask):
     mix_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
 
     return mix_output
+
+def apply_cutout_mask_to_output(output, mask):
+    """apply the cutout mask to the output data
+    Args:
+        output: the output data
+        mask: the mask to apply
+    Returns:
+        cut_output: the cutout input data
+    """
+
+    x1, x2, y1, y2 = mask["x1"], mask["x2"], mask["y1"], mask["y2"]
+
+    # apply the mask to the output and save to cut_output
+    cut_output = output.clone()
+    cut_output[:, x1:x2, y1:y2] = 0.
+
+    return cut_output
