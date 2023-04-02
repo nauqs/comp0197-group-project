@@ -38,26 +38,26 @@ if __name__ == "__main__":
     # create output directory for weights
     Path("weights").mkdir(parents=True, exist_ok=True)
 
-    # # baseline: train will all labels
-    # print("Training with all labels...")
-    # model_config = {'training': 'fully-labeled'}
-    # model_name = utils.model_config_to_name(model_config)
-    # model = models.load_deeplab().to(device)
-    # with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
-    #     model = train.train_supervised(model, train_all_dl, valid_dl, epochs)
-    # torch.save(model.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
+    # baseline: train will all labels
+    print("Training with all labels...")
+    model_config = {'training': 'fully-labeled'}
+    model_name = utils.model_config_to_name(model_config)
+    model = models.load_deeplab().to(device)
+    with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
+        model = train.train_supervised(model, train_all_dl, valid_dl, epochs)
+    torch.save(model.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
 
-    # # train supervised
-    # print("Training supervised...")
-    # model_config = {'training': 'supervised'}
-    # model_name = utils.model_config_to_name(model_config)
-    # model = models.load_deeplab().to(device)
-    # with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
-    #     model = train.train_supervised(model, train_lab_dl, valid_dl, epochs)
-    # torch.save(model.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
+    # train supervised
+    print("Training supervised...")
+    model_config = {'training': 'supervised'}
+    model_name = utils.model_config_to_name(model_config)
+    model = models.load_deeplab().to(device)
+    with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
+        model = train.train_supervised(model, train_lab_dl, valid_dl, epochs)
+    torch.save(model.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
 
     # test multiple lambda values
-    for lamb in [2]: # 0.5, 1
+    for lamb in [0.5, 1, 2]:
 
         # train semi-supervised
         print("Training semi-supervised...")
