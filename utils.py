@@ -81,10 +81,10 @@ def cutout(inputs, target=[], alpha=1.0):
 
     # assign target_a and target_b
     if len(target) > 0:
-        return cutout_input, inputs, target, mask
+        return cutout_input, inputs, None, target, None, mask
 
     else:
-        return cutout_input, inputs, None, mask
+        return cutout_input, inputs, None, None, None, mask
     
 def mixup(inputs, target=[], alpha=1.0):
     """generate the Mixup versionf of the input and target data
@@ -114,10 +114,10 @@ def mixup(inputs, target=[], alpha=1.0):
 
     # assign target_a and target_b
     if len(target) > 0:
-        return mix_input, inputs, target
+        return mix_input, inputs, None, target, None, None
 
     else:
-        return mix_input, inputs, None
+        return mix_input, inputs, None, None, None, None
 
 def cutmix(inputs, target=[], alpha=1.0):
     """generate the CutMix versions of the input and target data
