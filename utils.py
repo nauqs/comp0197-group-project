@@ -39,6 +39,85 @@ def visualize_predictions(images, logits, filename):
     image_grid = (255 * image_grid).to(torch.uint8).cpu()
     torchvision.io.write_jpeg(image_grid, filename)
 
+def cutout(inputs, target=[], alpha=1.0):
+    """generate the Cutout version of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        cutout_input: the cutout input data
+        target: the original target data
+        mask: the mask used to cutout the input data
+    """
+    device = inputs.device
+    # initialise lambda
+    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
+
+    # get the width and height of the input image
+    W, H = inputs.shape[2], inputs.shape[3]
+
+    cx = torch.randint(W, (1,)).item()
+    cy = torch.randint(H, (1,)).item()
+    r_w = torch.sqrt(1.0 - lam)
+    r_h = torch.sqrt(1.0 - lam)
+    cut_w = (W * r_w).int()
+    cut_h = (H * r_h).int()
+
+    x1 = torch.clamp(cx - cut_w // 2, 0, W).to(device)
+    y1 = torch.clamp(cy - cut_h // 2, 0, H).to(device)
+    x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
+    y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
+
+    # apply the mask to the input data and save to cutout_input
+    cutout_input = inputs.clone().to(device)
+    cutout_input[:, :, x1:x2, y1:y2] = 0.
+
+    # adjust lambda to the exact area ratio
+    # lam = 1 - ((x2 - x1) * (y2 - y1) / (W * H))
+
+    # save the mask
+    mask = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
+
+    # assign target_a and target_b
+    if len(target) > 0:
+        return cutout_input, inputs, target, mask
+
+    else:
+        return cutout_input, inputs, None, mask
+    
+def mixup(inputs, target=[], alpha=1.0):
+    """generate the Mixup versionf of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        mix_input: the mixup input data
+        target: the original target data
+        mask: the mask used to cutout the input data
+    """
+    device = inputs.device
+    # initialise lambda
+    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
+
+    # find the batch size from input data
+    batch_size = len(inputs)
+
+    # generate a random list of indices with size of the batch size
+    rand_idx = torch.randperm(batch_size)
+
+    # mix up the input data and save to mix_input
+    input_a = inputs
+    input_b = inputs[rand_idx]
+    mix_input = (lam * input_a + (1 - lam) * input_b).to(device)
+
+    # assign target_a and target_b
+    if len(target) > 0:
+        return mix_input, inputs, target
+
+    else:
+        return mix_input, inputs, None
 
 def cutmix(inputs, target=[], alpha=1.0):
     """generate the CutMix versions of the input and target data
