@@ -211,6 +211,6 @@ def apply_cutout_mask_to_output(output, mask):
 
     # apply the mask to the output and save to cut_output
     cut_output = output.clone()
-    cut_output[:, x1:x2, y1:y2] = 0.
+    cut_output[:, x1:x2, y1:y2] = 2
 
     return cut_output
