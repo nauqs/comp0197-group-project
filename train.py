@@ -558,7 +558,7 @@ def train_semi_supervised_cutmix(
             iou1 = iou_eval(lab_logits1, labels, labeled_pixels)
             iou2 = iou_eval(lab_logits2, labels, labeled_pixels)
             iou_ensemble = iou_eval(lab_prob_ensemble, labels, labeled_pixels)
-
+            
             # compute the dice metric for both models
             dice1 = dice_eval(lab_logits1, labels, labeled_pixels)
             dice2 = dice_eval(lab_logits2, labels, labeled_pixels)
@@ -615,3 +615,177 @@ def train_semi_supervised_cutmix(
         )
 
     return model1, model2
+
+def train_semi_supervised_cutout(
+        model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=0.5
+):
+
+    device = next(model1.parameters()).device
+    wandb.config.update({"lr": lr})
+    # set optimizer to optimise both models
+    params = list(model1.parameters()) + list(model2.parameters())
+    optimizer = torch.optim.Adam(params, lr=lr)
+
+    # iterable for unlabeled images
+    # we will need to sample a few with every labeled batch
+    # if there are more labeled than unlabeled, we will need to loop around, hence the cycle
+    unlabeled_images_iter = cycle(train_unlab_dl)
+    print(
+        f"Using {train_unlab_dl.batch_size} unlabeled images per labeled batch of {train_lab_dl.batch_size}."
+    )
+
+    # iterate over epochs
+    for epoch in range(epochs):
+        t = time()
+        # loss is combined, accuracy is per model
+        train_loss = 0
+        train_acc1 = 0
+        train_acc2 = 0
+        train_acc_ensemble = 0
+        train_iou1 = 0
+        train_iou2 = 0
+        train_iou_ensemble = 0
+        train_dice1 = 0
+        train_dice2 = 0
+        train_dice_ensemble = 0
+
+        # iterate over batches of labeled data
+        n_batches = len(train_lab_dl)
+        for images, labels in train_lab_dl:
+            images, labels = images.to(device), labels.to(device)
+
+            unlabeled_images, _ = next(unlabeled_images_iter)
+            unlabeled_images = unlabeled_images.to(device)
+
+            # cutmix the unlabeled images
+            (
+                mix_unlab_images,
+                unlab_images,
+                _,
+                _,
+                _,
+                unlab_mask,
+            ) = utils.cutout(unlabeled_images)
+
+            # get a mask of labeled pixels (foreground/background)
+            labeled_pixels = labels != 2
+            # zero gradients
+            optimizer.zero_grad()
+
+            # get model predictions for labeled data
+            lab_logits1 = model1(images)["out"][:, 0]
+            lab_logits2 = model2(images)["out"][:, 0]
+
+            # stop gradient for predictions
+            lab_preds1 = (lab_logits1 > 0).detach().clone()
+            lab_preds2 = (lab_logits2 > 0).detach().clone()
+
+            # get model predictions for unlabeled data
+
+            # Step 1: get predictions for images_a and images_b separately in both models, and cut-out them
+            unlab_logits1_images = model1(unlab_images)["out"][:, 0]
+            unlab_logits2_images = model2(unlab_images)["out"][:, 0]
+
+            unlab_target1_cutmix = utils.apply_cutmix_mask_to_output(
+                unlab_logits1_images, unlab_mask
+            )
+            unlab_target2_cutmix = utils.apply_cutmix_mask_to_output(
+                unlab_logits2_images, unlab_mask
+            )
+
+            # Step 2: get predicted labels for cut-out images in both models
+            unlab_logits1_cutout = model1(mix_unlab_images)["out"][:, 0]
+            unlab_logits2_cutout = model2(mix_unlab_images)["out"][:, 0]
+            unlab_preds1_cutout = (unlab_logits1_cutout > 0).detach().clone()
+            unlab_preds2_cutout = (unlab_logits2_cutout > 0).detach().clone()
+
+            # compute losses
+            # TODO
+            loss = 0
+
+            lab_probs1 =  torch.sigmoid(lab_logits1)
+            lab_probs2 =  torch.sigmoid(lab_logits2)
+            lab_prob_ensemble = (lab_probs1 + lab_probs2) / 2
+            # accuracy is only computed on labeled pixels
+            acc1 = (
+                ((lab_probs1[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                .float()
+                .mean()
+            )
+            acc2 = (
+                ((lab_probs2[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                .float()
+                .mean()
+            )
+            acc_ensemble = (
+                ((lab_prob_ensemble[labeled_pixels] > 0.5) == labels[labeled_pixels])
+                .float()
+                .mean()
+            )
+
+            # compute IoU metric for both models
+            iou1 = iou_eval(lab_logits1, labels, labeled_pixels)
+            iou2 = iou_eval(lab_logits2, labels, labeled_pixels)
+            iou_ensemble = iou_eval(lab_prob_ensemble, labels, labeled_pixels)
+            
+            # compute the dice metric for both models
+            dice1 = dice_eval(lab_logits1, labels, labeled_pixels)
+            dice2 = dice_eval(lab_logits2, labels, labeled_pixels)
+            dice_ensemble = dice_eval(lab_prob_ensemble, labels, labeled_pixels)
+
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item() / n_batches
+            train_acc1 += acc1.item() / n_batches
+            train_acc2 += acc2.item() / n_batches
+            train_acc_ensemble += acc_ensemble.item() / n_batches
+            train_iou1 += iou1.item() / n_batches
+            train_iou2 += iou2.item() / n_batches
+            train_iou_ensemble += iou_ensemble.item() / n_batches
+            train_dice1 += dice1.item() / n_batches
+            train_dice2 += dice2.item() / n_batches
+            train_dice_ensemble += dice_ensemble.item() / n_batches
+
+        # print statistics
+        val_loss1, val_acc1, val_iou1, val_dice1 = eval(model1, valid_dl)
+        val_loss2, val_acc2, val_iou2, val_dice2 = eval(model2, valid_dl)
+        val_loss, val_acc, val_iou, val_dice = eval_ensemble(model1, model2, valid_dl)
+        epoch_time = -t + (t := time())  # time per epoch
+        wandb.log(
+            {
+                "epoch": epoch + 1,
+                "time": epoch_time,
+                "train_loss": train_loss,
+                "train_acc1": train_acc1,
+                "train_acc2": train_acc2,
+                "train_acc": train_acc_ensemble,
+                "train_iou1": train_iou1,
+                "train_iou2": train_iou2,
+                "train_iou": train_iou_ensemble,
+                "train_dice1": train_dice1,
+                "train_dice2": train_dice2,
+                "train_dice": train_dice_ensemble,
+                "val_loss1": val_loss1,
+                "val_acc1": val_acc1,
+                "val_iou1": val_iou1,
+                "val_dice1": val_dice1,
+                "val_loss2": val_loss2,
+                "val_acc2": val_acc2,
+                "val_iou2": val_iou2,
+                "val_dice2": val_dice2,
+                "val_loss": val_loss,
+                "val_acc": val_acc,
+                "val_iou": val_iou,
+                "val_dice": val_dice,
+            }
+        )
+        print(
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc1=:4.2%},{train_acc2=:4.2%},{train_acc_ensemble=:4.2%},{train_iou1=:4.2%},{train_iou2=:4.2%}, {train_dice1=:4.2%}, {train_dice2=:4.2%} ,{val_acc1=:4.2%}, {val_acc2=:4.2%}, {val_iou1=:4.2%}, {val_iou2=:4.2%}, {val_dice1=:4.2%}, {val_dice2=:4.2%}, {val_acc=:4.2%}, {val_iou=:4.2%}, {val_dice=:4.2%}"
+        )
+
+    return model1, model2
+
+
+
+
+        
