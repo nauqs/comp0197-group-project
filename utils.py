@@ -116,7 +116,7 @@ def mixup(inputs, target=[], alpha=1.0):
     # assign target_a and target_b
     if len(target) > 0:
         target_a, target_b = target, target[rand_idx]
-        return mix_input, inputs, None, target_a, target_b, None
+        return mix_input, inputs, None, target_a, target_b, lam
 
     else:
         return mix_input, inputs, None, None, None, None
