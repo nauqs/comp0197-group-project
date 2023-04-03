@@ -5,6 +5,14 @@ import datasets
 import numpy as np
 
 
+def model_config_to_name(config):
+    """
+    Given a model configuration dictionary
+    return a unique name for the model.
+    """
+    return '_'.join(f'{k}={v}' for k, v, in config.items())
+
+
 def unnormalize_images(images):
     mean, std = torch.tensor(datasets.DS_STATS["classification"], device=images.device)
     images = images * std[None, :, None, None] + mean[None, :, None, None]
@@ -31,6 +39,87 @@ def visualize_predictions(images, logits, filename):
     image_grid = (255 * image_grid).to(torch.uint8).cpu()
     torchvision.io.write_jpeg(image_grid, filename)
 
+def cutout(inputs, target=[], alpha=1.0):
+    """generate the Cutout version of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        cutout_input: the cutout input data
+        target: the original target data
+        mask: the mask used to cutout the input data
+    """
+    device = inputs.device
+    # initialise lambda
+    lam = torch.distributions.beta.Beta(3*alpha, alpha).sample()
+
+    # get the width and height of the input image
+    W, H = inputs.shape[2], inputs.shape[3]
+
+    cx = torch.randint(W, (1,)).item()
+    cy = torch.randint(H, (1,)).item()
+    r_w = torch.sqrt(1.0 - lam)
+    r_h = torch.sqrt(1.0 - lam)
+    cut_w = (W * r_w).int()
+    cut_h = (H * r_h).int()
+
+    x1 = torch.clamp(cx - cut_w // 2, 0, W).to(device)
+    y1 = torch.clamp(cy - cut_h // 2, 0, H).to(device)
+    x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
+    y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
+
+    # apply the mask to the input data and save to cutout_input
+    cutout_input = inputs.clone().to(device)
+    cutout_input[:, :, x1:x2, y1:y2] = 0.
+
+    # adjust lambda to the exact area ratio
+    # lam = 1 - ((x2 - x1) * (y2 - y1) / (W * H))
+
+    # save the mask
+    mask = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
+
+    # assign target_a and target_b
+    if len(target) > 0:
+        # target_b is dummy target
+        target_a, target_b = target, 2*np.ones_like(target)
+        return cutout_input, inputs, None, target_a, target_b, mask
+    else:
+        return cutout_input, inputs, None, None, None, mask
+    
+def mixup(inputs, target=[], alpha=1.0):
+    """generate the Mixup versionf of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        mix_input: the mixup input data
+        target: the original target data
+        mask: the mask used to cutout the input data
+    """
+    device = inputs.device
+    # initialise lambda
+    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
+
+    # find the batch size from input data
+    batch_size = len(inputs)
+
+    # generate a random list of indices with size of the batch size
+    rand_idx = torch.randperm(batch_size)
+
+    # mix up the input data and save to mix_input
+    input_a = inputs
+    input_b = inputs[rand_idx]
+    mix_input = (lam * input_a + (1 - lam) * input_b).to(device)
+    
+    # assign target_a and target_b
+    if len(target) > 0:
+        target_a, target_b = target, target[rand_idx]
+        return mix_input, inputs, None, target_a, target_b, lam
+
+    else:
+        return mix_input, inputs, None, None, None, None
 
 def cutmix(inputs, target=[], alpha=1.0):
     """generate the CutMix versions of the input and target data
@@ -108,3 +197,20 @@ def apply_cutmix_mask_to_output(output_a, output_b, mask):
     mix_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
 
     return mix_output
+
+def apply_cutout_mask_to_output(output, mask):
+    """apply the cutout mask to the output data
+    Args:
+        output: the output data
+        mask: the mask to apply
+    Returns:
+        cut_output: the cutout input data
+    """
+
+    x1, x2, y1, y2 = mask["x1"], mask["x2"], mask["y1"], mask["y2"]
+
+    # apply the mask to the output and save to cut_output
+    cut_output = output.clone()
+    cut_output[:, x1:x2, y1:y2] = 2
+
+    return cut_output

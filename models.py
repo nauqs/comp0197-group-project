@@ -3,7 +3,7 @@ from torchvision.models import resnet50, resnet101, ResNet50_Weights, ResNet101_
 from torchvision.models.segmentation import deeplabv3_resnet50, deeplabv3_resnet101
 
 
-def load_deeplab(num_classes=1, use_imagenet_weights=True, large_resnet=False):
+def load_deeplab(num_classes=1, use_imagenet_weights=False, large_resnet=False):
     """
     Initializes a DeepLabV3 segmentation model according to the paper
     'Semi-Supervised Semantic Segmentation with Cross Pseudo Supervision'
