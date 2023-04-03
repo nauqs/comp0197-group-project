@@ -95,7 +95,7 @@ if __name__ == "__main__":
         logits = model(images)["out"][:, 0]
         utils.visualize_predictions(images, logits, "plots/predictions.jpg")
 
-    elif args.pseudo_label and not args.cutmix:
+    elif args.pseudo_label and (not args.cutmix and not args.cutout):
         # initialize model
         print("Training semi-supervised")
         print("Labeled data: ", len(train_lab_dl.dataset))

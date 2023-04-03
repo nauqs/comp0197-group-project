@@ -40,6 +40,7 @@ To train in Colab:
   - The default model is the supervised one with no semi-supervised learning.
   - Use ```--pseudo-label``` for semi-supervised learning
   - Use ```--cutmix``` for cutmix augmentation, there is none by default 
+  - Use ```--cutout``` for cutout augmentation, there is none by default 
   - Use ```--large-resnet``` for Resnet101, Resnet50 is used by default
   - Use ```--no-pretrained``` for no pretrained Resnet weights, we are loading them by default
 
