@@ -52,7 +52,7 @@ def cutout(inputs, target=[], alpha=1.0):
     """
     device = inputs.device
     # initialise lambda
-    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
+    lam = torch.distributions.beta.Beta(3*alpha, alpha).sample()
 
     # get the width and height of the input image
     W, H = inputs.shape[2], inputs.shape[3]
