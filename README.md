@@ -29,6 +29,9 @@ To train in Colab:
 - go to files, click Mount Google Drive
 - change your working directory to this repository 
     (using ```os.chdir``` or ```%cd path/to/comp0197-group-project/```)
+- to get weights run from hf, run:
+```snapshot_download(repo_id="nauqs-ucl/comp0197-group-project", local_dir="content/", local_dir_use_symlinks="auto")```
+    this will download everything to the ```content/``` dir on Colab
 - to install the dependencies, you can run the following:
     ```
     !pip install -q condacolab
