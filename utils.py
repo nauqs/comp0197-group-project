@@ -40,182 +40,6 @@ def visualize_predictions(images, logits, filename):
     image_grid = (255 * image_grid).to(torch.uint8).cpu()
     torchvision.io.write_jpeg(image_grid, filename)
 
-def cutout(inputs, target=[], alpha=1.0):
-    """generate the Cutout version of the input and target data
-    Args
-        input: the input data
-        target: the target data
-        alpha: the alpha value for the beta distribution
-    Returns:
-        cutout_input: the cutout input data
-        target: the original target data
-        mask: the mask used to cutout the input data
-    """
-    device = inputs.device
-    # initialise lambda
-    lam = torch.distributions.beta.Beta(3*alpha, alpha).sample()
-
-    # get the width and height of the input image
-    W, H = inputs.shape[2], inputs.shape[3]
-
-    cx = torch.randint(W, (1,)).item()
-    cy = torch.randint(H, (1,)).item()
-    r_w = torch.sqrt(1.0 - lam)
-    r_h = torch.sqrt(1.0 - lam)
-    cut_w = (W * r_w).int()
-    cut_h = (H * r_h).int()
-
-    x1 = torch.clamp(cx - cut_w // 2, 0, W).to(device)
-    y1 = torch.clamp(cy - cut_h // 2, 0, H).to(device)
-    x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
-    y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
-
-    # apply the mask to the input data and save to cutout_input
-    cutout_input = inputs.clone().to(device)
-    cutout_input[:, :, x1:x2, y1:y2] = 0.
-
-    # adjust lambda to the exact area ratio
-    # lam = 1 - ((x2 - x1) * (y2 - y1) / (W * H))
-
-    # save the mask
-    mask = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
-
-    # assign target_a and target_b
-    if len(target) > 0:
-        # target_b is dummy target
-        target_a, target_b = target, 2*np.ones_like(target)
-        return cutout_input, inputs, None, target_a, target_b, mask
-    else:
-        return cutout_input, inputs, None, None, None, mask
-    
-def mixup(inputs, target=[], alpha=1.0):
-    """generate the Mixup versionf of the input and target data
-    Args
-        input: the input data
-        target: the target data
-        alpha: the alpha value for the beta distribution
-    Returns:
-        mix_input: the mixup input data
-        target: the original target data
-        mask: the mask used to cutout the input data
-    """
-    device = inputs.device
-    # initialise lambda
-    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
-
-    # find the batch size from input data
-    batch_size = len(inputs)
-
-    # generate a random list of indices with size of the batch size
-    rand_idx = torch.randperm(batch_size)
-
-    # mix up the input data and save to mix_input
-    input_a = inputs
-    input_b = inputs[rand_idx]
-    mix_input = (lam * input_a + (1 - lam) * input_b).to(device)
-    
-    # assign target_a and target_b
-    if len(target) > 0:
-        target_a, target_b = target, target[rand_idx]
-        return mix_input, inputs, None, target_a, target_b, lam
-
-    else:
-        return mix_input, inputs, None, None, None, None
-
-def cutmix(inputs, target=[], alpha=1.0):
-    """generate the CutMix versions of the input and target data
-    Paper: https://arxiv.org/pdf/1905.04899.pdf
-    Args:
-        input: the input data
-        target: the target data
-        alpha: the alpha value for the beta distribution
-    Returns:
-        mix_input: the cutmix input data
-        target_a: the target data A
-        target_b: the target data B
-        mask: the mask used to cutmix the input data
-    """
-    device = inputs.device
-    # initialise lambda
-    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
-
-    # find the batch size from input data
-    batch_size = len(inputs)
-
-    # generate a random list of indices with size of the batch size
-    rand_idx = torch.randperm(batch_size)
-
-    # get the width and height of the input image
-    W, H = inputs.shape[2], inputs.shape[3]
-
-    cx = torch.randint(W, (1,)).item()
-    cy = torch.randint(H, (1,)).item()
-    r_w = torch.sqrt(1.0 - lam)
-    r_h = torch.sqrt(1.0 - lam)
-    cut_w = (W * r_w).int()
-    cut_h = (H * r_h).int()
-
-    x1 = torch.clamp(cx - cut_w // 2, 0, W).to(device)
-    y1 = torch.clamp(cy - cut_h // 2, 0, H).to(device)
-    x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
-    y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
-
-    # apply the mask to the input data and save to mix_input
-    input_a = inputs
-    input_b = inputs[rand_idx]
-    mix_input = inputs.clone().to(device)
-    mix_input[:, :, x1:x2, y1:y2] = input_b[:, :, x1:x2, y1:y2]
-
-    # adjust lambda to the exact area ratio
-    # lam = 1 - ((x2 - x1) * (y2 - y1) / (W * H))
-
-    # save the mask
-    mask = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
-
-    # assign target_a and target_b
-    if len(target) > 0:
-        target_a, target_b = target, target[rand_idx]
-        return mix_input, input_a, input_b, target_a, target_b, mask
-
-    else:
-        return mix_input, input_a, input_b, None, None, mask
-
-
-def apply_cutmix_mask_to_output(output_a, output_b, mask):
-    """apply the cutmix mask to the output data
-    Args:
-        output_a: the output A
-        output_b: the output B
-        mask: the mask to apply
-    Returns:
-        mix_output: the cutmix input data
-    """
-
-    x1, x2, y1, y2 = mask["x1"], mask["x2"], mask["y1"], mask["y2"]
-
-    # apply the mask to the output and save to mix_output
-    mix_output = output_a.clone()
-    mix_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
-
-    return mix_output
-
-def apply_cutout_mask_to_output(output, mask):
-    """apply the cutout mask to the output data
-    Args:
-        output: the output data
-        mask: the mask to apply
-    Returns:
-        cut_output: the cutout input data
-    """
-
-    x1, x2, y1, y2 = mask["x1"], mask["x2"], mask["y1"], mask["y2"]
-
-    # apply the mask to the output and save to cut_output
-    cut_output = output.clone()
-    cut_output[:, x1:x2, y1:y2] = 2
-
-    return cut_output
-
 def affine_transformation(inputs, target=[]):
     """generate the affine transformation version of the input and target data
     Args
@@ -240,4 +64,121 @@ def affine_transformation(inputs, target=[]):
     transformed_inputs = transformed_inputs.clone().to(device)
     transformed_targets = transformed_targets.clone().to(device)
 
-    return transformed_inputs, transformed_targets
+    return transformed_inputs, transformed_targets    
+
+def image_augmentation(method, inputs, target=[], alpha=1.0):
+    """generate the image augmentation version of the inputs and targets
+    Args
+        method: the method to use for image augmentation (cutmix, mixup, cutout)
+        input: the input image(s)
+        target: the target data (optional)
+        alpha: the alpha value for the beta distribution
+    Returns:
+        aug_input: the augmented input data
+        input_a: the first input data
+        input_b: the second input data (for mixup and cutmix)
+        target_a: the target data for input_a
+        target_b: the target data for input_b (for mixup and cutmix)
+        augment: the mask (or lambda value for mixup) of the augmentation
+    """
+    
+    # ensure the method specified is valid
+    assert method in ["cutmix", "mixup", "cutout"]
+
+    # check the device of the inputs
+    device = inputs.device
+
+    # initialise lambda for the image augmentation
+    lam = torch.distributions.beta.Beta(alpha, alpha).sample()
+
+    # initialise input_a and input_b
+    input_a, input_b = inputs, None
+    target_a, target_b = None, None
+
+    # randomly select inputs_b from the input data (for mixup and cutmix)
+    if method in ["mixup", "cutmix"]:
+        batch_size = len(inputs)
+        rand_idx = torch.randperm(batch_size)
+        input_b = inputs[rand_idx]
+        if len(target) > 0:
+            target_b = target[rand_idx]
+    else:
+        if len(target) > 0:
+            target_b = 2*torch.ones_like(target)
+
+    if method in ["cutmix", "cutout"]:
+        # get the width and height of the input image
+        W, H = inputs.shape[2], inputs.shape[3]
+
+        cx = torch.randint(W, (1,)).item()
+        cy = torch.randint(H, (1,)).item()
+        r_w = torch.sqrt(1.0 - lam)
+        r_h = torch.sqrt(1.0 - lam)
+        cut_w = (W * r_w).int()
+        cut_h = (H * r_h).int()
+
+        x1 = torch.clamp(cx - cut_w // 2, 0, W).to(device)
+        y1 = torch.clamp(cy - cut_h // 2, 0, H).to(device)
+        x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
+        y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
+
+        # restrict the cutout area to be at most 50% of the image
+        ratio = ((x2-x1) * (y2-y1)) / (W * H)
+        if ratio > 0.5:
+            side_shrink_ratio = torch.sqrt(torch.tensor(0.5) / ratio)
+            x2 = torch.clamp(x1+(x2-x1)*side_shrink_ratio, 0, W).to(device)
+            y2 = torch.clamp(y1+(y2-y1)*side_shrink_ratio, 0, H).to(device)
+            
+        # apply the augmentation to the input data and save to aug_input
+        aug_input = inputs.clone().to(device)
+
+        if method == "cutmix":
+            aug_input[:, :, x1:x2, y1:y2] = input_b[:, :, x1:x2, y1:y2]
+        else:
+            aug_input[:, :, x1:x2, y1:y2] = 0.
+
+        # save the augment
+        augment = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
+
+    # implement mixup
+    else:
+        aug_input = (lam * input_a + (1 - lam) * input_b).to(device)
+        augment = lam
+
+    return aug_input, input_a, input_b, target_a, target_b, augment
+
+
+def apply_image_aug_to_output(method, output_a, output_b, augment):
+    """apply the image augmentation to output
+    Args:
+        method: the method to apply (cutmix, cutout, mixup)
+        output_a: the output data A
+        output_b: the output data B
+        augment: the augmentation to apply
+    Returns:
+        aug_output: the data from the augmentation
+    """
+
+    assert method in ["cutmix", "cutout", "mixup"]
+
+    # check the device of the output
+    device = output_a.clone().to(device)
+
+    # initialise the output
+    aug_output = output_a.clone()
+
+    if method == ["cutmix", "cutout"]:
+        
+        x1, x2, y1, y2 = augment["x1"], augment["x2"], augment["y1"], augment["y2"]
+
+        if method == "cutmix":
+            # apply the mask to the output
+            aug_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
+        else:
+            # apply the mask to the output
+            aug_output[:, x1:x2, y1:y2] = 2 
+
+    else:
+        aug_output = (augment * output_a + (1-augment) * output_b).to(device)
+    
+    return aug_output

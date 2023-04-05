@@ -67,7 +67,7 @@ if __name__ == "__main__":
         train_unlab_dl,
         valid_dl,
         test_dl,
-    ) = datasets.create_dataloaders(batch_size=6)
+    ) = datasets.create_dataloaders(batch_size=6,affine_transform=True)
 
     args = parse_args()
     wandb.init(project="comp0197-group-project", entity="comp0197-group-project", group="comp0197-group-project")
