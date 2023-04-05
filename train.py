@@ -617,7 +617,7 @@ def train_semi_supervised_cutmix(
     return model1, model2
 
 def train_semi_supervised_cutout(
-        model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=0.5
+        model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transformation = True , lr=1e-3, lamb=0.5
 ):
 
     device = next(model1.parameters()).device
@@ -654,6 +654,10 @@ def train_semi_supervised_cutout(
         for images, labels in train_lab_dl:
             images, labels = images.to(device), labels.to(device)
 
+            # apply affine transformation 
+            if affine_transformation == True:
+                images, labels = affine_transformation(images, labels)
+
             unlabeled_images, _ = next(unlabeled_images_iter)
             unlabeled_images = unlabeled_images.to(device)
 
@@ -666,6 +670,7 @@ def train_semi_supervised_cutout(
                 _,
                 unlab_mask,
             ) = utils.cutout(unlabeled_images)
+
 
             # get a mask of labeled pixels (foreground/background)
             labeled_pixels = labels != 2
@@ -698,6 +703,7 @@ def train_semi_supervised_cutout(
             unlab_logits2_cutout = model2(mix_unlab_images)["out"][:, 0]
             unlab_preds1_cutout = (unlab_logits1_cutout > 0).detach().clone()
             unlab_preds2_cutout = (unlab_logits2_cutout > 0).detach().clone()
+
 
             # compute losses
             loss_sup1 = F.binary_cross_entropy_with_logits(

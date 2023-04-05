@@ -169,7 +169,7 @@ if __name__ == "__main__":
         model2 = model2.to(device)
         # train
         model1, model2 = train.train_semi_supervised_cutout(
-            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10
+            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10, affine_transformation=True
         )
 
         # save model

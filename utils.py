@@ -3,6 +3,8 @@ import torchvision
 from pathlib import Path
 import datasets
 import numpy as np
+import torchvision.transforms as transforms
+from torchvision.transforms.functional import affine
 
 
 def model_config_to_name(config):
@@ -214,3 +216,27 @@ def apply_cutout_mask_to_output(output, mask):
     cut_output[:, x1:x2, y1:y2] = 2
 
     return cut_output
+
+def affine_transformation(inputs, target=[]):
+    """generate the affine transformation version of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        cutout_input: the cutout input data
+        target: the original target data
+        mask: the mask used to cutout the input data
+    """
+    device = inputs.device
+    # initialise lambda
+
+    # apply affine transformation to the input data
+    angle = np.random.randint(-10, 10)
+    translate = [np.random.randint(-10, 10), np.random.randint(-10, 10)]
+    shear = np.random.randint(-10, 10)
+    scale = np.random.uniform(1, 1.2)
+    transformed_inputs = affine(inputs, angle, translate, scale, shear)
+    transformed_targets = affine(target, angle, translate, scale, shear, fill=2)
+
+    return transformed_inputs, transformed_targets
