@@ -115,13 +115,14 @@ def eval(model, dataloader):
     return epoch_loss, epoch_acc, epoch_iou, epoch_dice
 
 
-def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3):
+def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, aug_method=None):
     """
     Trains a segmentation model.
 
     The dataloader 'train_lab_dl' should contain only labeled images
     and is only used for the supervised loss.
     """
+    assert aug_method is None or aug_method == 'affine'
     model = models.load_deeplab().to(device)
     wandb.config.update({"lr": lr})
     # set optimizer
@@ -139,6 +140,10 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3):
         n_batches = len(train_lab_dl)
         for images, labels in train_lab_dl:
             images, labels = images.to(device), labels.to(device)
+
+            # apply data augmentation
+            if aug_method == 'affine':
+                images, labels = utils.affine_transformation(images, labels)
 
             # get a mask of labeled pixels (foreground/background)
             labeled_pixels = labels != 2
@@ -216,7 +221,7 @@ def train_semi_supervised(
     """
 
     # check inputs
-    assert aug_method is None or aug_method in ['cutmix', 'cutout', 'mixup']
+    assert aug_method is None or aug_method in ['affine', 'cutmix', 'cutout', 'mixup']
     model1 = models.load_deeplab().to(device)
     model2 = models.load_deeplab().to(device)
     print(
@@ -243,6 +248,15 @@ def train_semi_supervised(
         for labeled_images, labels in train_lab_dl:
             labeled_images, labels = labeled_images.to(device), labels.to(device)
 
+            # get batch of unlabeled images (without loading their labels)
+            unlabeled_images, _ = next(train_all_dl)
+            unlabeled_images = unlabeled_images.to(device)
+
+            # apply data augmentation
+            if aug_method == 'affine':
+                labeled_images, labels = utils.affine_transformation(labeled_images, labels)
+                unlabeled_images, _ = utils.affine_transformation(unlabeled_images)
+
             # zero gradients
             optimizer.zero_grad()
 
@@ -264,12 +278,8 @@ def train_semi_supervised(
 
             ## unsupervised part ##
 
-            # get batch of unlabeled images (without loading their labels)
-            unlabeled_images, _ = next(train_all_dl)
-            unlabeled_images = unlabeled_images.to(device)
-
             # cross-presudo supervision loss
-            if aug_method is None:
+            if aug_method is None or aug_method == 'affine':
 
                 # get model predictions for unlabeled data
                 unlab_logits1 = model1(unlabeled_images)["out"][:, 0]
@@ -285,7 +295,6 @@ def train_semi_supervised(
                 ) + F.binary_cross_entropy_with_logits(
                     unlab_logits2, unlab_preds1.float()
                 )
-                break
 
             # cutmix-style loss
             elif aug_method in ['cutmix', 'mixup']:
@@ -430,6 +439,6 @@ if __name__ == "__main__":
         train_unlab_dl,
         valid_dl,
         test_dl,
-    ) = datasets.create_dataloaders(batch_size=6,affine_transform=True)
+    ) = datasets.create_dataloaders(batch_size=6)
     # model = train_supervised(device, train_lab_dl, valid_dl,test_dl, epochs=10)
     model = train_semi_supervised(device,train_all_dl, train_lab_dl, valid_dl,test_dl, epochs=10, aug_method='cutout')
