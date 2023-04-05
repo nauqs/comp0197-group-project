@@ -424,20 +424,3 @@ def train_semi_supervised(
     )
 
     return model1
-        
-
-if __name__ == "__main__":
-    # THIS IS FOR TESTING
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"using device: {device}")
-    import datasets
-    wandb.init(project="comp0197-group-project", entity="comp0197-group-project", group="alex_testing")
-    # create dataloaders
-    (
-        train_all_dl,
-        train_lab_dl,
-        valid_dl,
-        test_dl,
-    ) = datasets.create_dataloaders(batch_size=6)
-    # model = train_supervised(device, train_lab_dl, valid_dl,test_dl, epochs=10)
-    model = train_semi_supervised(device,train_all_dl, train_lab_dl, valid_dl,test_dl, epochs=10, aug_method='cutout')
