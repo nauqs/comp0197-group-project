@@ -223,19 +223,21 @@ def affine_transformation(inputs, target=[]):
         target: the target data
         alpha: the alpha value for the beta distribution
     Returns:
-        cutout_input: the cutout input data
-        target: the original target data
-        mask: the mask used to cutout the input data
+        transformed_inputs
+        transformed_outputs
     """
     device = inputs.device
     # initialise lambda
 
     # apply affine transformation to the input data
-    angle = np.random.randint(-10, 10)
-    translate = [np.random.randint(-10, 10), np.random.randint(-10, 10)]
-    shear = np.random.randint(-10, 10)
-    scale = np.random.uniform(1, 1.2)
+    angle = torch.randint(-10, 10, size=(1,)).item()
+    translate = (torch.randint(-10, 10, size=(1,)).item(), torch.randint(-10, 10, size=(1,)).item())
+    shear = torch.randint(-10, 10, size=(1,)).item()
+    scale = torch.FloatTensor([torch.FloatTensor(1, ).uniform_(1, 1.2).item()])
     transformed_inputs = affine(inputs, angle, translate, scale, shear)
     transformed_targets = affine(target, angle, translate, scale, shear, fill=2)
+
+    transformed_inputs = transformed_inputs.clone().to(device)
+    transformed_targets = transformed_targets.clone().to(device)
 
     return transformed_inputs, transformed_targets
