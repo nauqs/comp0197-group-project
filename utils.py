@@ -50,8 +50,11 @@ def affine_transformation(inputs, target=[]):
         transformed_inputs
         transformed_outputs
     """
-    device = inputs.device
-    # initialise lambda
+    # check the device of the inputs
+    try:
+        device = inputs.device
+    except:
+        device = torch.device("cpu")
 
     # apply affine transformation to the input data
     angle = torch.randint(-10, 10, size=(1,)).item()
@@ -85,7 +88,10 @@ def image_augmentation(method, inputs, target=[], alpha=0.3):
     assert method in ["cutmix", "mixup", "cutout"]
 
     # check the device of the inputs
-    device = inputs.device
+    try:
+        device = inputs.device
+    except:
+        device = torch.device("cpu")
 
     # initialise lambda for the image augmentation
     lam = torch.distributions.beta.Beta(alpha, alpha).sample()
@@ -93,6 +99,8 @@ def image_augmentation(method, inputs, target=[], alpha=0.3):
     # initialise input_a and input_b
     input_a, input_b = inputs, None
     target_a, target_b = None, None
+    if len(target) > 0:
+        target_a = target
 
     # randomly select inputs_b from the input data (for mixup and cutmix)
     if method in ["mixup", "cutmix"]:
@@ -164,7 +172,10 @@ def apply_image_aug_to_output(method, output_a, output_b, augment):
 
     assert method in ["cutmix", "cutout", "mixup"]
     # check the device of the output
-    device = output_a.device
+    try:
+        device = output_a.device
+    except:
+        device = torch.device("cpu")
 
     # initialise the output
     aug_output = output_a.clone()
