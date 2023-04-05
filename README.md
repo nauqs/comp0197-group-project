@@ -29,6 +29,9 @@ To train in Colab:
 - go to files, click Mount Google Drive
 - change your working directory to this repository 
     (using ```os.chdir``` or ```%cd path/to/comp0197-group-project/```)
+- to get weights run from hf, run:
+```snapshot_download(repo_id="nauqs-ucl/comp0197-group-project", local_dir="content/", local_dir_use_symlinks="auto")```
+    this will download everything to the ```content/``` dir on Colab
 - to install the dependencies, you can run the following:
     ```
     !pip install -q condacolab
@@ -36,7 +39,7 @@ To train in Colab:
     condacolab.install()
     !conda install -c  pytorch python=3.9 pytorch=1.13 torchvision=0.14
     ```
-- run ```! python main.py``` with required flags:
+- run ```! python train_single_model.py``` with required flags:
   - The default model is the supervised one with no semi-supervised learning.
   - Use ```--pseudo-label``` for semi-supervised learning
   - Use ```--cutmix``` for cutmix augmentation, there is none by default 
