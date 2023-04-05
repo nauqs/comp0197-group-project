@@ -82,3 +82,15 @@ if __name__ == "__main__":
                 model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lamb=lamb,
             )
         torch.save(model1.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
+
+        # train cutout
+        print("Training semi-supervised cutout...")
+        model_config = {'training': 'cutout', 'lamb': lamb}
+        model_name = utils.model_config_to_name(model_config)
+        model1 = models.load_deeplab().to(device)
+        model2 = models.load_deeplab().to(device)
+        with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
+            model1, model2 = train.train_semi_supervised_cutout(
+                model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lamb=lamb,
+            )
+        torch.save(model1.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
