@@ -66,7 +66,7 @@ def affine_transformation(inputs, target=[]):
 
     return transformed_inputs, transformed_targets    
 
-def image_augmentation(method, inputs, target=[]):
+def image_augmentation(method, inputs, target=[], alpha=0.3):
     """generate the image augmentation version of the inputs and targets
     Args
         method: the method to use for image augmentation (cutmix, mixup, cutout)
@@ -83,12 +83,6 @@ def image_augmentation(method, inputs, target=[]):
     
     # ensure the method specified is valid
     assert method in ["cutmix", "mixup", "cutout"]
-
-    # set the alpha value for the beta distribution according to the method
-    if method == "mixup":
-        alpha = 0.2
-    else:
-        alpha = 1.0
 
     # check the device of the inputs
     device = inputs.device
@@ -127,12 +121,16 @@ def image_augmentation(method, inputs, target=[]):
         x2 = torch.clamp(cx + cut_w // 2, 0, W).to(device)
         y2 = torch.clamp(cy + cut_w // 2, 0, H).to(device)
 
-        # restrict the cutout area to be at most 50% of the image
-        ratio = ((x2-x1) * (y2-y1)) / (W * H)
-        if ratio > 0.5:
-            side_shrink_ratio = torch.sqrt(torch.tensor(0.5) / ratio)
-            x2 = torch.clamp(x1+(x2-x1)*side_shrink_ratio, 0, W).to(device, dtype=torch.int)
-            y2 = torch.clamp(y1+(y2-y1)*side_shrink_ratio, 0, H).to(device, dtype=torch.int)
+        # restrict the cutout length, width to be at most 50% of the image
+        if method == "cutout":
+            width_ratio = (x2-x1) / W
+            height_ratio = (y2-y1) / H
+            if width_ratio > 0.5:
+                width_shrink_ratio = torch.tensor(0.5) / width_ratio
+                x2 = torch.clamp(x1+(x2-x1)*width_shrink_ratio, 0, W).to(device, dtype=torch.int)
+            if height_ratio > 0.5:
+                height_shrink_ratio = torch.tensor(0.5) / height_ratio
+                y2 = torch.clamp(y1+(y2-y1)*height_shrink_ratio, 0, H).to(device, dtype=torch.int)
             
         # apply the augmentation to the input data and save to aug_input
         aug_input = inputs.clone().to(device)
