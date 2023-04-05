@@ -23,13 +23,14 @@ def run(device, epochs, lr, supervised_only, lamb=None, aug_method=None):
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    epochs = 50
+    # fixed hyperparameters
     lr = 1e-3
+    epochs = 50
 
-    for lamb in [0.1,0.25,0.5]:
-        # run supervised only
-        run(device=device, epochs=epochs, lr=lr, supervised_only=True)
+    # run supervised only
+    run(device=device, epochs=epochs, lr=lr, supervised_only=True)
 
-        # run augmented semi-supervised
+    # test different lambda values for each semi-supervised model
+    for lamb in [0.1, 0.25, 0.5]:
         for aug_method in [None, 'affine', 'cutmix', 'cutout', 'mixup']:
             run(device=device, epochs=epochs, lr=lr, supervised_only=False, lamb=lamb, aug_method=aug_method)
