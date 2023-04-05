@@ -1,8 +1,12 @@
 import wandb
 from train import eval_ensemble, eval
+import os
+import models
+import torch
+import datasets
 
 def test_model_performance(
-    model1, model2, test_lab_dl
+    model, test_lab_dl
 ):
     """
     tests a segmentation model.
@@ -12,19 +16,9 @@ def test_model_performance(
 
     """
     # print statistics
-    test_loss1, test_acc1, test_iou1, test_dice1 = eval(model1, test_lab_dl)
-    test_loss2, test_acc2, test_iou2, test_dice2 = eval(model2, test_lab_dl)
-    test_loss, test_acc, test_iou, test_dice = eval_ensemble(model1, model2, test_lab_dl)
+    test_loss, test_acc, test_iou, test_dice = eval(model, test_lab_dl)
     wandb.log(
         {
-            "test_loss1": test_loss1,
-            "test_acc1": test_acc1,
-            "test_iou1": test_iou1,
-            "test_dice1": test_dice1,
-            "test_loss2": test_loss2,
-            "test_acc2": test_acc2,
-            "test_iou2": test_iou2,
-            "test_dice2": test_dice2,
             "test_loss": test_loss,
             "test_acc": test_acc,
             "test_iou": test_iou,
@@ -32,5 +26,28 @@ def test_model_performance(
         }
     )
 
-    return  test_acc1, test_acc2, test_iou1, test_iou2, test_dice1, test_dice2, test_acc, test_iou, test_dice
+    return test_acc, test_iou, test_dice
 
+
+def get_weights(path_to_folder):
+    """
+    returns the paths to the weights of the models in the folder
+    """
+    paths = []
+    for file in os.listdir(path_to_folder):
+        if file.endswith(".pt"):
+            paths.append(os.path.join(path_to_folder, file))
+    return paths
+
+if __name__ == "__main__":
+    weights = get_weights('weights')
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = models.load_deeplab(
+    use_imagenet_weights=False, large_resnet=False)
+    _,_,_,_,test_dl= datasets.create_dataloaders(batch_size=6)
+
+    for weight in weights:
+        wandb.init(project="comp0197-group-project", entity="comp0197-group-project", group="test_set", name=weight.split('/')[-1], reinit=True)
+        model.load_state_dict(torch.load(weight,map_location=device))
+        model = model.to(device)
+        test_model_performance(model, test_dl)
