@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from time import time
 import utils
+import models
 
 
 @torch.no_grad()
@@ -114,14 +115,14 @@ def eval(model, dataloader):
     return epoch_loss, epoch_acc, epoch_iou, epoch_dice
 
 
-def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
+def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3):
     """
     Trains a segmentation model.
 
     The dataloader 'train_lab_dl' should contain only labeled images
     and is only used for the supervised loss.
     """
-    device = next(model.parameters()).device
+    model = models.load_deeplab().to(device)
     wandb.config.update({"lr": lr})
     # set optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -201,7 +202,7 @@ def train_supervised(model, train_lab_dl, valid_dl, epochs, lr=1e-3):
 
 
 def train_semi_supervised(
-    model1, model2, train_unlab_dl, train_all_dl, valid_dl, test_dl, epochs, lr=1e-3, lamb=1.5
+    device, train_all_dl, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, lamb=1.5, aug_method=None
     ):
     """
     Trains a segmentation model.
@@ -215,8 +216,9 @@ def train_semi_supervised(
     """
 
     # check inputs
-    assert augment_method is None or augment_method in ['affine', 'cutmix', 'cutout', 'mixup']
-    device = next(model1.parameters()).device
+    assert aug_method is None or aug_method in ['cutmix', 'cutout', 'mixup']
+    model1 = models.load_deeplab().to(device)
+    model2 = models.load_deeplab().to(device)
     print(
         f"Using {train_all_dl.batch_size} unlabeled images per labeled batch of {train_all_dl.batch_size}."
     )
@@ -225,6 +227,7 @@ def train_semi_supervised(
     params = list(model1.parameters()) + list(model2.parameters())
     optimizer = torch.optim.Adam(params, lr=lr)
     wandb.config.update({"lr": lr})
+    train_all_dl = iter(train_all_dl)
 
     # iterate over epochs
     for epoch in range(epochs):
@@ -249,14 +252,13 @@ def train_semi_supervised(
             labeled_pixels = labels != 2
 
             # get model predictions for labeled data
-            lab_logits1 = model1(images)["out"][:, 0]
-            lab_logits2 = model2(images)["out"][:, 0]
+            lab_logits1 = model1(labeled_images)["out"][:, 0]
+            lab_logits2 = model2(labeled_images)["out"][:, 0]
 
             # compute supervised loss
-            loss_sup1 = F.binary_cross_entropy_with_logits(
+            loss_sup = F.binary_cross_entropy_with_logits(
                 lab_logits1[labeled_pixels], labels[labeled_pixels].float()
-            )
-            loss_sup2 = F.binary_cross_entropy_with_logits(
+            ) + F.binary_cross_entropy_with_logits(
                 lab_logits2[labeled_pixels], labels[labeled_pixels].float()
             )
 
@@ -267,7 +269,7 @@ def train_semi_supervised(
             unlabeled_images = unlabeled_images.to(device)
 
             # cross-presudo supervision loss
-            if augment_method is None or augment_method == 'affine':
+            if aug_method is None:
 
                 # get model predictions for unlabeled data
                 unlab_logits1 = model1(unlabeled_images)["out"][:, 0]
@@ -283,9 +285,10 @@ def train_semi_supervised(
                 ) + F.binary_cross_entropy_with_logits(
                     unlab_logits2, unlab_preds1.float()
                 )
+                break
 
             # cutmix-style loss
-            elif augment_method in ['cutmix', 'mixup']:
+            elif aug_method in ['cutmix', 'mixup']:
 
                 # augment the unlabeled images
                 (
@@ -295,7 +298,7 @@ def train_semi_supervised(
                     _,
                     _,
                     unlab_mask,
-                ) = utils.image_augmentation(augment_method, unlabeled_images)
+                ) = utils.image_augmentation(aug_method, unlabeled_images)
 
                 # get predictions for images_a and images_b separately in both models
                 unlab_logits1_images_a = model1(unlab_images_a)["out"][:, 0]
@@ -337,7 +340,7 @@ def train_semi_supervised(
                     _,
                     _,
                     mask_coordinates,
-                ) = utils.image_augmentation(augment_method, unlabeled_images)
+                ) = utils.image_augmentation(aug_method, unlabeled_images)
 
                 # get predictions for original images
                 unlab_logits1_orig = model1(unlabeled_images)["out"][:, 0]
@@ -379,8 +382,10 @@ def train_semi_supervised(
             train_iou += iou.item() / n_batches
             train_dice += dice.item() / n_batches
 
+            break
+
         # print statistics
-        val_loss1, val_acc1, val_iou1, val_dice1 = eval(model1, valid_dl)
+        val_loss, val_acc, val_iou, val_dice = eval(model1, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
         wandb.log(
             {
@@ -413,3 +418,20 @@ def train_semi_supervised(
 
     return model1
         
+
+if __name__ == "__main__":
+    # THIS IS FOR TESTING
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"using device: {device}")
+    import datasets
+    wandb.init(project="comp0197-group-project", entity="comp0197-group-project", group="alex_testing")
+    # create dataloaders
+    (
+        train_all_dl,
+        train_lab_dl,
+        train_unlab_dl,
+        valid_dl,
+        test_dl,
+    ) = datasets.create_dataloaders(batch_size=6,affine_transform=True)
+    # model = train_supervised(device, train_lab_dl, valid_dl,test_dl, epochs=10)
+    model = train_semi_supervised(device,train_all_dl, train_lab_dl, valid_dl,test_dl, epochs=10, aug_method='cutout')

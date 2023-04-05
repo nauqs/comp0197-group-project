@@ -126,8 +126,8 @@ def image_augmentation(method, inputs, target=[], alpha=1.0):
         ratio = ((x2-x1) * (y2-y1)) / (W * H)
         if ratio > 0.5:
             side_shrink_ratio = torch.sqrt(torch.tensor(0.5) / ratio)
-            x2 = torch.clamp(x1+(x2-x1)*side_shrink_ratio, 0, W).to(device)
-            y2 = torch.clamp(y1+(y2-y1)*side_shrink_ratio, 0, H).to(device)
+            x2 = torch.clamp(x1+(x2-x1)*side_shrink_ratio, 0, W).to(device, dtype=torch.int)
+            y2 = torch.clamp(y1+(y2-y1)*side_shrink_ratio, 0, H).to(device, dtype=torch.int)
             
         # apply the augmentation to the input data and save to aug_input
         aug_input = inputs.clone().to(device)
@@ -160,14 +160,13 @@ def apply_image_aug_to_output(method, output_a, output_b, augment):
     """
 
     assert method in ["cutmix", "cutout", "mixup"]
-
     # check the device of the output
-    device = output_a.clone().to(device)
+    device = output_a.device
 
     # initialise the output
     aug_output = output_a.clone()
 
-    if method == ["cutmix", "cutout"]:
+    if method in ["cutmix", "cutout"]:
         
         x1, x2, y1, y2 = augment["x1"], augment["x2"], augment["y1"], augment["y2"]
 
