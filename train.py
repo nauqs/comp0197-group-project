@@ -207,7 +207,7 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
 
 
 def train_semi_supervised(
-    device, train_all_dl, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, lamb=1.5, aug_method=None
+    device, train_all_dl, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, lamb=0.5, aug_method=None
     ):
     """
     Trains a segmentation model.
