@@ -382,8 +382,6 @@ def train_semi_supervised(
             train_iou += iou.item() / n_batches
             train_dice += dice.item() / n_batches
 
-            break
-
         # print statistics
         val_loss, val_acc, val_iou, val_dice = eval(model1, valid_dl)
         epoch_time = -t + (t := time())  # time per epoch
