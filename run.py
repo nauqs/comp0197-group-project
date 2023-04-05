@@ -1,36 +1,73 @@
+import itertools
 from pathlib import Path
+import random
 import datasets
 import train
 import wandb
 import torch
 
-def run(device, epochs, lr, supervised_only, lamb=None, aug_method=None):
-    wandb.init(project="comp0197-group-project", entity="comp0197-group-project")
+aug_methods = [None, "affine", "cutmix", "cutout", "mixup"]
 
+
+def run(device, epochs, lr, method: str, lamb=None, aug_method=None):
+    assert method in ["supervised-full", "supervised", "semi-supervised"]
+    assert aug_method in aug_methods
+    if method == "supervised-full" or method == "supervised":
+        aug_method = lamb = None
+
+    wandb.init(
+        project="comp0197-group-project",
+        entity="comp0197-group-project",
+        config=dict(
+            epochs=epochs,
+            lr=lr,
+            method=method,
+            lamb=lamb,
+            aug_method=aug_method,
+        ),
+    )
+
+    labelled_frac = 1.0 if method == "supervised-full" else 0.0625
     (
         train_all_dl,
         train_lab_dl,
         valid_dl,
         test_dl,
-    ) = datasets.create_dataloaders(batch_size=6)
+    ) = datasets.create_dataloaders(batch_size=6, labelled_frac=labelled_frac)
 
-    if supervised_only:
+    if method == 'supervised-full' or method == 'supervised':
         train.train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=lr)
     else:
-        train.train_semi_supervised(device, train_all_dl, train_lab_dl, valid_dl, test_dl, epochs, lr=lr, lamb=lamb, aug_method=aug_method)
+        train.train_semi_supervised(
+            device,
+            train_all_dl,
+            train_lab_dl,
+            valid_dl,
+            test_dl,
+            epochs,
+            lr=lr,
+            lamb=lamb,
+            aug_method=aug_method,
+        )
 
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # fixed hyperparameters
-    lr = 1e-3
     epochs = 50
+    lr = 1e-3
 
-    # run supervised only
-    run(device=device, epochs=epochs, lr=lr, supervised_only=True)
+    while True:
+        configs = []
+        # add self-supervised configs
+        for lamb, aug_method in itertools.product([0.1, 0.25, 0.5], aug_methods):
+            configs.append({"lamb": lamb, "aug_method": aug_method, 'method': 'semi-supervised'})
+        # add supervised configs
+        configs.append({'method': 'full-supervised'})
+        configs.append({'method': 'supervised'})
 
-    # test different lambda values for each semi-supervised model
-    for lamb in [0.1, 0.25, 0.5]:
-        for aug_method in [None, 'affine', 'cutmix', 'cutout', 'mixup']:
-            run(device=device, epochs=epochs, lr=lr, supervised_only=False, lamb=lamb, aug_method=aug_method)
+        # shuffle so everyone runs them in a different order
+        random.shuffle(configs)
+
+        for c in configs:
+            run(device=device, epochs=epochs, lr=lr, **c)
