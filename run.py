@@ -64,7 +64,7 @@ if __name__ == "__main__":
         for lamb, aug_method in itertools.product([0.1, 0.25, 0.5], aug_methods):
             configs.append({"lamb": lamb, "aug_method": aug_method, 'method': 'semi-supervised'})
         # add supervised configs
-        configs.append({'method': 'full-supervised'})
+        configs.append({'method': 'supervised-full'})
         configs.append({'method': 'supervised'})
 
         # shuffle so everyone runs them in a different order
@@ -74,6 +74,7 @@ if __name__ == "__main__":
             try:
                 run(device=device, epochs=epochs, lr=lr, **c)
             except Exception as e:
+                wandb.finish(exit_code=1)
                 print(e)
             finally:
                 try:
