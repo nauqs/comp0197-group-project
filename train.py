@@ -436,7 +436,6 @@ if __name__ == "__main__":
     (
         train_all_dl,
         train_lab_dl,
-        train_unlab_dl,
         valid_dl,
         test_dl,
     ) = datasets.create_dataloaders(batch_size=6)

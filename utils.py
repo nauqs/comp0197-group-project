@@ -66,13 +66,12 @@ def affine_transformation(inputs, target=[]):
 
     return transformed_inputs, transformed_targets    
 
-def image_augmentation(method, inputs, target=[], alpha=1.0):
+def image_augmentation(method, inputs, target=[]):
     """generate the image augmentation version of the inputs and targets
     Args
         method: the method to use for image augmentation (cutmix, mixup, cutout)
         input: the input image(s)
         target: the target data (optional)
-        alpha: the alpha value for the beta distribution
     Returns:
         aug_input: the augmented input data
         input_a: the first input data
@@ -84,6 +83,12 @@ def image_augmentation(method, inputs, target=[], alpha=1.0):
     
     # ensure the method specified is valid
     assert method in ["cutmix", "mixup", "cutout"]
+
+    # set the alpha value for the beta distribution according to the method
+    if method == "mixup":
+        alpha = 0.2
+    else:
+        alpha = 1.0
 
     # check the device of the inputs
     device = inputs.device
