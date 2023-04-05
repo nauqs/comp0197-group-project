@@ -79,7 +79,7 @@ if __name__ == "__main__":
         model2 = models.load_deeplab().to(device)
         with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
             model1, model2 = train.train_semi_supervised_cutmix(
-                model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transform= True, lamb=lamb,
+                model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transform= False, lamb=lamb,
             )
         torch.save(model1.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")
 
@@ -91,6 +91,6 @@ if __name__ == "__main__":
         model2 = models.load_deeplab().to(device)
         with wandb.init(config=model_config, name=f'{model_name}_{args.run_idx}', group=model_name, project='comp0197-group-project') as run:
             model1, model2 = train.train_semi_supervised_cutout(
-                model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transform = True, lamb=lamb,
+                model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transform = False, lamb=lamb,
             )
         torch.save(model1.state_dict(), f"weights/{model_name}_{args.run_idx}.pt")

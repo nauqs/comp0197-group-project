@@ -414,7 +414,7 @@ def train_semi_supervised(
 
 
 def train_semi_supervised_cutmix(
-    model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=0.5, affine_transform= True
+    model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, lr=1e-3, lamb=0.5, affine_transform= False
 ):
     """
     Trains a segmentation model.
@@ -621,7 +621,7 @@ def train_semi_supervised_cutmix(
     return model1, model2
 
 def train_semi_supervised_cutout(
-        model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transform = True , lr=1e-3, lamb=0.5
+        model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs, affine_transform = False , lr=1e-3, lamb=0.5
 ):
 
     device = next(model1.parameters()).device
