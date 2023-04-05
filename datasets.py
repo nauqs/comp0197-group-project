@@ -91,13 +91,50 @@ def create_datasets(root="/tmp/adl_data", valid_frac=0.2, labelled_frac=0.0625):
     return train_all_ds, train_lab_ds, train_unlab_ds, valid_ds, test_ds
 
 
-def create_dataloaders(batch_size=8, image_size=224, *args, **kwargs):
+def affine_transformation(inputs, target=[]):
+    """generate the affine transformation version of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        transformed_inputs
+        transformed_outputs
+    """
+    device = inputs.device
+    # initialise lambda
+
+    # apply affine transformation to the input data
+    angle = torch.randint(-10, 10, size=(1,)).item()
+    translate = (torch.randint(-10, 10, size=(1,)).item(), torch.randint(-10, 10, size=(1,)).item())
+    shear = torch.randint(-10, 10, size=(1,)).item()
+    scale = torch.FloatTensor([torch.FloatTensor(1, ).uniform_(1, 1.2).item()])
+    transformed_inputs = affine(inputs, angle, translate, scale, shear)
+    transformed_targets = affine(target, angle, translate, scale, shear, fill=2)
+
+    transformed_inputs = transformed_inputs.clone().to(device)
+    transformed_targets = transformed_targets.clone().to(device)
+
+    return transformed_inputs, transformed_targets    
+
+def create_dataloaders(batch_size=8, image_size=224,affine_transform = False, *args, **kwargs):
     """
     Generates datasets using 'create_datasets' and crates a
     DataLoader for each dataset.
     """
+
     datasets = create_datasets(*args, **kwargs)
-    dataloaders = [
-        DataLoader(ds, batch_size=batch_size, shuffle=True) for ds in datasets
-    ]
+    if affine_transform == True:
+
+        dataloaders = [
+            DataLoader(ds, batch_size=batch_size, shuffle=True,transform=affine_transformation) for ds in datasets
+        ]
+
+    else:
+
+        dataloaders = [
+            DataLoader(ds, batch_size=batch_size, shuffle=True) for ds in datasets
+        ]
+
     return dataloaders
+
