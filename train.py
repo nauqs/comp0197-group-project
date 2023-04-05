@@ -461,7 +461,7 @@ def train_semi_supervised_cutmix(
 
             # apply affine transformation 
             if affine_transform == True:
-                images, labels = affine_transformation(images, labels)
+                images, labels = utils.affine_transformation(images, labels)
 
             unlabeled_images, _ = next(unlabeled_images_iter)
             unlabeled_images = unlabeled_images.to(device)
@@ -660,7 +660,7 @@ def train_semi_supervised_cutout(
 
             # apply affine transformation 
             if affine_transform == True:
-                images, labels = affine_transformation(images, labels)
+                images, labels = utils.affine_transformation(images, labels)
 
             unlabeled_images, _ = next(unlabeled_images_iter)
             unlabeled_images = unlabeled_images.to(device)
@@ -871,7 +871,7 @@ def train_semi_supervised_affine(
         for images, labels in train_lab_dl:
             images, labels = images.to(device), labels.to(device)
 
-            images, labels = affine_transformation(images, labels)
+            images, labels = utils.affine_transformation(images, labels)
 
 
             # give next batch if we have more left
