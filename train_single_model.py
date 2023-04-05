@@ -43,6 +43,12 @@ def parse_args():
         default=False,
         help="Whether to use cutout augmentation",
     )
+    parser.add_argument(
+        "--affine",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Whether to use affine augmentation",
+    )
     args = parser.parse_args()
 
     assert sum([args.cutmix, args.cutout]) <= 1, "Only one augmentation can be used"
@@ -95,7 +101,7 @@ if __name__ == "__main__":
         logits = model(images)["out"][:, 0]
         utils.visualize_predictions(images, logits, "plots/predictions.jpg")
 
-    elif args.pseudo_label and (not args.cutmix and not args.cutout):
+    elif args.pseudo_label and (not args.cutmix and not args.cutout and not args.affine):
         # initialize model
         print("Training semi-supervised")
         print("Labeled data: ", len(train_lab_dl.dataset))
@@ -169,7 +175,24 @@ if __name__ == "__main__":
         model2 = model2.to(device)
         # train
         model1, model2 = train.train_semi_supervised_cutout(
-            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10, affine_transformation=True
+            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=10, affine_transform=True
+        )
+
+    elif args.pseudo_label and args.affine:
+        # initialize model
+        print("Training semi-supervised affine")
+        print("Labeled data: ", len(train_lab_dl.dataset))
+        model1 = models.load_deeplab(
+            use_imagenet_weights=args.pretrain, large_resnet=args.large_resnet
+        )
+        model2 = models.load_deeplab(
+            use_imagenet_weights=args.pretrain, large_resnet=args.large_resnet
+        )
+        model1 = model1.to(device)
+        model2 = model2.to(device)
+        # train
+        model1, model2 = train.train_semi_supervised_affine(
+            model1, model2, train_unlab_dl, train_lab_dl, valid_dl, epochs=30
         )
 
         # save model
