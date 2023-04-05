@@ -85,6 +85,9 @@ def image_augmentation(method, inputs, target=[], alpha=1.0):
     # ensure the method specified is valid
     assert method in ["cutmix", "mixup", "cutout"]
 
+    if method == "mixup":
+        alpha = 0.2
+
     # check the device of the inputs
     device = inputs.device
 
