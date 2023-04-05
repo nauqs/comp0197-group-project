@@ -50,6 +50,7 @@ def run(device, epochs, lr, method: str, lamb=None, aug_method=None):
             aug_method=aug_method,
         )
 
+    wandb.finish()
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -70,4 +71,12 @@ if __name__ == "__main__":
         random.shuffle(configs)
 
         for c in configs:
-            run(device=device, epochs=epochs, lr=lr, **c)
+            try:
+                run(device=device, epochs=epochs, lr=lr, **c)
+            except Exception as e:
+                print(e)
+            finally:
+                try:
+                    wandb.finish()
+                except: pass
+
