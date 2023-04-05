@@ -26,10 +26,11 @@ if __name__ == "__main__":
     epochs = 50
     lamb = 0.5
 
-    for lr in [1e-2, 1e-3, 1e-4]:
-        # run supervised only
-        run(device=device, epochs=epochs, lr=lr, supervised_only=True)
+    for lamb in [0.1,0.25,0.5,1]:
+        for lr in [1e-2, 1e-3, 1e-4]:
+            # run supervised only
+            run(device=device, epochs=epochs, lr=lr, supervised_only=True)
 
-        # run augmented semi-supervised
-        for aug_method in [None, 'affine', 'cutmix', 'cutout', 'mixup']:
-            run(device=device, epochs=epochs, lr=lr, supervised_only=False, lamb=lamb, aug_method=aug_method)
+            # run augmented semi-supervised
+            for aug_method in [None, 'affine', 'cutmix', 'cutout', 'mixup']:
+                run(device=device, epochs=epochs, lr=lr, supervised_only=False, lamb=lamb, aug_method=aug_method)
