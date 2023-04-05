@@ -2,7 +2,6 @@ import torch
 import torchvision
 from pathlib import Path
 import datasets
-import numpy as np
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import affine
 
