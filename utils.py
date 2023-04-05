@@ -40,6 +40,32 @@ def visualize_predictions(images, logits, filename):
     image_grid = (255 * image_grid).to(torch.uint8).cpu()
     torchvision.io.write_jpeg(image_grid, filename)
 
+def affine_transformation(inputs, target=[]):
+    """generate the affine transformation version of the input and target data
+    Args
+        input: the input data
+        target: the target data
+        alpha: the alpha value for the beta distribution
+    Returns:
+        transformed_inputs
+        transformed_outputs
+    """
+    device = inputs.device
+    # initialise lambda
+
+    # apply affine transformation to the input data
+    angle = torch.randint(-10, 10, size=(1,)).item()
+    translate = (torch.randint(-10, 10, size=(1,)).item(), torch.randint(-10, 10, size=(1,)).item())
+    shear = torch.randint(-10, 10, size=(1,)).item()
+    scale = torch.FloatTensor([torch.FloatTensor(1, ).uniform_(1, 1.2).item()])
+    transformed_inputs = affine(inputs, angle, translate, scale, shear)
+    transformed_targets = affine(target, angle, translate, scale, shear, fill=2)
+
+    transformed_inputs = transformed_inputs.clone().to(device)
+    transformed_targets = transformed_targets.clone().to(device)
+
+    return transformed_inputs, transformed_targets    
+
 def image_augmentation(method, inputs, target=[], alpha=1.0):
     """generate the image augmentation version of the inputs and targets
     Args
