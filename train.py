@@ -174,7 +174,11 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
 
         # print statistics
         val_loss, val_acc, val_iou, val_dice = eval(model, valid_dl)
+        test_loss, test_acc, test_iou, test_dice = eval(model, test_dl)
         epoch_time = -t + (t := time())  # time per epoch
+        print(
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}"
+        )
         wandb.log(
             {
                 "epoch": epoch + 1,
@@ -187,22 +191,13 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
                 "val_acc": val_acc,
                 "val_iou": val_iou,
                 "val_dice": val_dice,
+                "test_loss": test_loss,
+                "test_acc": test_acc,
+                "test_iou": test_iou,
+                "test_dice": test_dice,
             }
         )
-        print(
-            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}"
-        )
 
-    # test metrics
-    test_loss, test_acc, test_iou, test_dice = eval(model, test_dl)
-    wandb.log(
-        {
-            "test_loss": test_loss,
-            "test_acc": test_acc,
-            "test_iou": test_iou,
-            "test_dice": test_dice,
-        }
-    )
 
     return model
 
@@ -394,6 +389,7 @@ def train_semi_supervised(
 
         # print statistics
         val_loss, val_acc, val_iou, val_dice = eval(model1, valid_dl)
+        test_loss, test_acc, test_iou, test_dice = eval(model1, test_dl)
         epoch_time = -t + (t := time())  # time per epoch
         wandb.log(
             {
@@ -407,21 +403,15 @@ def train_semi_supervised(
                 "val_acc": val_acc,
                 "val_iou": val_iou,
                 "val_dice": val_dice,
+                "test_loss": test_loss,
+                "test_acc": test_acc,
+                "test_iou": test_iou,
+                "test_dice": test_dice,
             }
         )
         print(
             f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}"
         )
 
-    # test metrics
-    test_loss, test_acc, test_iou, test_dice = eval(model1, test_dl)
-    wandb.log(
-        {
-            "test_loss": test_loss,
-            "test_acc": test_acc,
-            "test_iou": test_iou,
-            "test_dice": test_dice,
-        }
-    )
 
     return model1
