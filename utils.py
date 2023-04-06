@@ -49,10 +49,7 @@ def affine_transformation(inputs, target=[]):
     Returns:
         transformed_inputs
         transformed_outputs
-    """
-    # check the device of the inputs
-    device = inputs.device
-    
+    """    
 
     # apply affine transformation to the input data
     angle = torch.randint(-10, 10, size=(1,)).item()
@@ -60,10 +57,8 @@ def affine_transformation(inputs, target=[]):
     shear = torch.randint(-10, 10, size=(1,)).item()
     scale = torch.FloatTensor([torch.FloatTensor(1, ).uniform_(1, 1.2).item()])
     transformed_inputs = affine(inputs, angle, translate, scale, shear)
-    transformed_inputs = transformed_inputs.clone().to(device)
     if len(target)>0:
         transformed_targets = affine(target, angle, translate, scale, shear, fill=2)
-        transformed_targets = transformed_targets.clone().to(device)
         return transformed_inputs, transformed_targets    
     else:
         return transformed_inputs, None
