@@ -1,4 +1,3 @@
-from itertools import cycle
 import wandb
 import torch
 import torch.nn.functional as F
@@ -229,7 +228,6 @@ def train_semi_supervised(
     optimizer = torch.optim.Adam(params, lr=lr)
     wandb.config.update({"lr": lr})
 
-    train_all_dl = cycle(train_all_dl)
     # iterate over epochs
     for epoch in range(epochs):
         t = time()
@@ -245,7 +243,7 @@ def train_semi_supervised(
             labeled_images, labels = labeled_images.to(device), labels.to(device)
 
             # get batch of unlabeled images (without loading their labels)
-            unlabeled_images, _ = next(train_all_dl)
+            unlabeled_images, _ = next(iter(train_all_dl))
             unlabeled_images = unlabeled_images.to(device)
 
             # apply data augmentation
