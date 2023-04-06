@@ -57,11 +57,12 @@ if __name__ == "__main__":
 
     epochs = 50
     lr = 1e-3
+    lamb = 0.25
 
     while True:
         configs = []
         # add self-supervised configs
-        for lamb, aug_method in itertools.product([0.1, 0.25, 0.5], aug_methods):
+        for aug_method in aug_methods:
             configs.append({"lamb": lamb, "aug_method": aug_method, 'method': 'semi-supervised'})
         # add supervised configs
         configs.append({'method': 'supervised-full'})
@@ -78,6 +79,5 @@ if __name__ == "__main__":
                 print(e)
             finally:
                 try:
-                    wandb.finish()
+                    wandb.finish(exit_code=1)
                 except: pass
-
