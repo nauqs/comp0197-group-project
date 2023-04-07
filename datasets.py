@@ -93,7 +93,7 @@ def create_datasets(root="/tmp/adl_data", valid_frac=0.2, labelled_frac=0.0625):
 
 def create_dataloaders(batch_size=8, image_size=224, *args, **kwargs):
     """
-    Generates datasets using 'create_datasets' and crates a
+    Generates datasets using 'create_datasets' and creates a
     DataLoader for each dataset.
     """
 
