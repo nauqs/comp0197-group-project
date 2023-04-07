@@ -11,16 +11,18 @@ def model_config_to_name(config):
     Given a model configuration dictionary
     return a unique name for the model.
     """
-    return '_'.join(f'{k}={v}' for k, v, in config.items())
+    return "_".join(f"{k}={v}" for k, v, in config.items())
 
 
 def unnormalize_images(images):
+    """Unnormalize images to [0, 1]"""
     mean, std = torch.tensor(datasets.DS_STATS["classification"], device=images.device)
     images = images * std[None, :, None, None] + mean[None, :, None, None]
     return images.clip(0, 1)
 
 
 def visualize_predictions(images, logits, filename):
+    """Visualize input images and predictions"""
     # normalize images to [0, 1]
     images = unnormalize_images(images)
 
@@ -40,6 +42,7 @@ def visualize_predictions(images, logits, filename):
     image_grid = (255 * image_grid).to(torch.uint8).cpu()
     torchvision.io.write_jpeg(image_grid, filename)
 
+
 def affine_transformation(inputs, target=[]):
     """generate the affine transformation version of the input and target data
     Args
@@ -49,19 +52,31 @@ def affine_transformation(inputs, target=[]):
     Returns:
         transformed_inputs
         transformed_outputs
-    """    
+    """
 
     # apply affine transformation to the input data
     angle = torch.randint(-10, 10, size=(1,)).item()
-    translate = (torch.randint(-10, 10, size=(1,)).item(), torch.randint(-10, 10, size=(1,)).item())
+    translate = (
+        torch.randint(-10, 10, size=(1,)).item(),
+        torch.randint(-10, 10, size=(1,)).item(),
+    )
     shear = torch.randint(-10, 10, size=(1,)).item()
-    scale = torch.FloatTensor([torch.FloatTensor(1, ).uniform_(1, 1.2).item()])
+    scale = torch.FloatTensor(
+        [
+            torch.FloatTensor(
+                1,
+            )
+            .uniform_(1, 1.2)
+            .item()
+        ]
+    )
     transformed_inputs = affine(inputs, angle, translate, scale, shear)
-    if len(target)>0:
+    if len(target) > 0:
         transformed_targets = affine(target, angle, translate, scale, shear, fill=2)
-        return transformed_inputs, transformed_targets    
+        return transformed_inputs, transformed_targets
     else:
         return transformed_inputs, None
+
 
 def image_augmentation(method, inputs, target=[], alpha=0.3):
     """generate the image augmentation version of the inputs and targets
@@ -77,7 +92,7 @@ def image_augmentation(method, inputs, target=[], alpha=0.3):
         target_b: the target data for input_b (for mixup and cutmix)
         augment: the mask (or lambda value for mixup) of the augmentation
     """
-    
+
     # ensure the method specified is valid
     assert method in ["cutmix", "mixup", "cutout"]
 
@@ -102,7 +117,7 @@ def image_augmentation(method, inputs, target=[], alpha=0.3):
             target_b = target[rand_idx]
     else:
         if len(target) > 0:
-            target_b = 2*torch.ones_like(target)
+            target_b = 2 * torch.ones_like(target)
 
     if method in ["cutmix", "cutout"]:
         # get the width and height of the input image
@@ -122,22 +137,26 @@ def image_augmentation(method, inputs, target=[], alpha=0.3):
 
         # restrict the cutout length, width to be at most 50% of the image
         if method == "cutout":
-            width_ratio = (x2-x1) / W
-            height_ratio = (y2-y1) / H
+            width_ratio = (x2 - x1) / W
+            height_ratio = (y2 - y1) / H
             if width_ratio > 0.5:
                 width_shrink_ratio = torch.tensor(0.5) / width_ratio
-                x2 = torch.clamp(x1+(x2-x1)*width_shrink_ratio, 0, W).to(device, dtype=torch.int)
+                x2 = torch.clamp(x1 + (x2 - x1) * width_shrink_ratio, 0, W).to(
+                    device, dtype=torch.int
+                )
             if height_ratio > 0.5:
                 height_shrink_ratio = torch.tensor(0.5) / height_ratio
-                y2 = torch.clamp(y1+(y2-y1)*height_shrink_ratio, 0, H).to(device, dtype=torch.int)
-            
+                y2 = torch.clamp(y1 + (y2 - y1) * height_shrink_ratio, 0, H).to(
+                    device, dtype=torch.int
+                )
+
         # apply the augmentation to the input data and save to aug_input
         aug_input = inputs.clone().to(device)
 
         if method == "cutmix":
             aug_input[:, :, x1:x2, y1:y2] = input_b[:, :, x1:x2, y1:y2]
         else:
-            aug_input[:, :, x1:x2, y1:y2] = 0.
+            aug_input[:, :, x1:x2, y1:y2] = 0.0
 
         # save the augment
         augment = {"x1": x1, "x2": x2, "y1": y1, "y2": y2}
@@ -165,12 +184,10 @@ def apply_image_aug_to_output(method, output_a, output_b, augment):
     # check the device of the output
     device = output_a.device
 
-
     # initialise the output
     aug_output = output_a.clone()
 
     if method in ["cutmix", "cutout"]:
-        
         x1, x2, y1, y2 = augment["x1"], augment["x2"], augment["y1"], augment["y2"]
 
         if method == "cutmix":
@@ -178,9 +195,9 @@ def apply_image_aug_to_output(method, output_a, output_b, augment):
             aug_output[:, x1:x2, y1:y2] = output_b[:, x1:x2, y1:y2]
         else:
             # apply the mask to the output
-            aug_output[:, x1:x2, y1:y2] = 2 
+            aug_output[:, x1:x2, y1:y2] = 2
 
     else:
-        aug_output = (augment * output_a + (1-augment) * output_b).to(device)
-    
+        aug_output = (augment * output_a + (1 - augment) * output_b).to(device)
+
     return aug_output

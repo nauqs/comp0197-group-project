@@ -6,6 +6,24 @@ import train
 import wandb
 import torch
 
+"""
+Main function to reproduce all experiments for this project.
+This file will run 
+- supervised training on the full training dataset
+- supervised training on a small fraction of the training dataset 6.25%
+- semi-supervised training on a small fraction of the dataset 6.25%
+    - with no augmentation
+    - with different augmentation methods:
+        - "affine"
+        - "cutmix"
+        - "cutout"
+        - "mixup"
+In this script we use epochs = 50, lr = 1e-3, lamb = 0.25
+There is wandb logging set up for each experiment.
+
+
+"""
+
 aug_methods = [None, "affine", "cutmix", "cutout", "mixup"]
 
 
@@ -35,7 +53,7 @@ def run(device, epochs, lr, method: str, lamb=None, aug_method=None):
         test_dl,
     ) = datasets.create_dataloaders(batch_size=6, labelled_frac=labelled_frac)
 
-    if method == 'supervised-full' or method == 'supervised':
+    if method == "supervised-full" or method == "supervised":
         train.train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=lr)
     else:
         train.train_semi_supervised(
@@ -52,6 +70,7 @@ def run(device, epochs, lr, method: str, lamb=None, aug_method=None):
 
     wandb.finish()
 
+
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -63,16 +82,19 @@ if __name__ == "__main__":
         configs = []
         # add self-supervised configs
         for aug_method in aug_methods:
-            configs.append({"lamb": lamb, "aug_method": aug_method, 'method': 'semi-supervised'})
+            configs.append(
+                {"lamb": lamb, "aug_method": aug_method, "method": "semi-supervised"}
+            )
         # add supervised configs
-        configs.append({'method': 'supervised-full'})
-        configs.append({'method': 'supervised'})
+        configs.append({"method": "supervised-full"})
+        configs.append({"method": "supervised"})
 
         # shuffle so everyone runs them in a different order
         random.shuffle(configs)
 
         for c in configs:
             try:
+                print(f"Running with configs: {c}")
                 run(device=device, epochs=epochs, lr=lr, **c)
             except Exception as e:
                 wandb.finish(exit_code=1)
@@ -80,4 +102,5 @@ if __name__ == "__main__":
             finally:
                 try:
                     wandb.finish(exit_code=1)
-                except: pass
+                except:
+                    pass

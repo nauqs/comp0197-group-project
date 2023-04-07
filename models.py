@@ -17,8 +17,6 @@ def load_deeplab(num_classes=1, use_imagenet_weights=False, large_resnet=False):
 
     And to get probabilities from the logits, run:
     >>> probs = torch.sigmoid(logits)
-
-    Known bug: the model requires at least two images in a batch.
     """
 
     # load deeplab with random initialization

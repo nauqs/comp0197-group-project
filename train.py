@@ -8,16 +8,14 @@ import models
 
 @torch.no_grad()
 def acc_eval(probs, labels, labeled_pixels):
-    acc = (
-        ((probs[labeled_pixels] > 0.5) == labels[labeled_pixels])
-        .float()
-        .mean()
-    )
+    """Calculate accuracy of predictions on labeled pixels"""
+    acc = ((probs[labeled_pixels] > 0.5) == labels[labeled_pixels]).float().mean()
     return acc
 
 
 @torch.no_grad()
 def iou_eval(probs, labels, labeled_pixels):
+    """Calculate mean IoU of predictions on labeled pixels"""
     smooth = 1e-10
 
     # foreground
@@ -43,6 +41,7 @@ def iou_eval(probs, labels, labeled_pixels):
 
 @torch.no_grad()
 def dice_eval(probs, labels, labeled_pixels):
+    """Calculate mean Dice of predictions on labeled pixels"""
     # foreground
     predicted_labels_1 = (probs[labeled_pixels] > 0.5) == 0
     true_labels_1 = labels[labeled_pixels] == 0
@@ -115,14 +114,16 @@ def eval(model, dataloader):
     return epoch_loss, epoch_acc, epoch_iou, epoch_dice
 
 
-def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, aug_method=None):
+def train_supervised(
+    device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, aug_method=None
+):
     """
-    Trains a segmentation model.
+    Trains a supervised segmentation model.
 
     The dataloader 'train_lab_dl' should contain only labeled images
     and is only used for the supervised loss.
     """
-    assert aug_method is None or aug_method == 'affine'
+    assert aug_method is None or aug_method == "affine"
     model = models.load_deeplab().to(device)
     wandb.config.update({"lr": lr})
     # set optimizer
@@ -142,7 +143,7 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
             images, labels = images.to(device), labels.to(device)
 
             # apply data augmentation
-            if aug_method == 'affine':
+            if aug_method == "affine":
                 images, labels = utils.affine_transformation(images, labels)
 
             # get a mask of labeled pixels (foreground/background)
@@ -160,7 +161,7 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
             )
             loss.backward()
             optimizer.step()
-            
+
             # compute metrics
             probs = torch.sigmoid(logits)
             acc = acc_eval(probs, labels, labeled_pixels)
@@ -176,7 +177,7 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
         test_loss, test_acc, test_iou, test_dice = eval(model, test_dl)
         epoch_time = -t + (t := time())  # time per epoch
         print(
-            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}"
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}, {test_acc=:4.2%},{train_iou=:4.2%}, {val_iou=:4.2%}, {test_iou=:4.2%}"
         )
         wandb.log(
             {
@@ -197,32 +198,40 @@ def train_supervised(device, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, a
             }
         )
 
-
     return model
 
 
 def train_semi_supervised(
-    device, train_all_dl, train_lab_dl, valid_dl, test_dl, epochs, lr=1e-3, lamb=0.5, aug_method=None
-    ):
+    device,
+    train_all_dl,
+    train_lab_dl,
+    valid_dl,
+    test_dl,
+    epochs,
+    lr=1e-3,
+    lamb=0.5,
+    aug_method=None,
+):
     """
     Trains a segmentation model.
 
     The dataloader 'train_lab_dl' should contain only labeled images
     and is only used for the supervised loss
-    The dataloader 'train_unlab_dl' should contain only unlabeled images
-    and is only used for the cps loss.
+    The dataloader 'train_all_dl' should contain all images
+    and is used for the cps loss.
     lamb is the weight of the cps loss.
+    aug_method is the data augmentation method to use, one of None, 'affine', 'cutmix', 'cutout', 'mixup'.
 
     """
 
     # check inputs
-    assert aug_method is None or aug_method in ['affine', 'cutmix', 'cutout', 'mixup']
+    assert aug_method is None or aug_method in ["affine", "cutmix", "cutout", "mixup"]
     model1 = models.load_deeplab().to(device)
     model2 = models.load_deeplab().to(device)
     print(
         f"Using {train_all_dl.batch_size} unlabeled images per labeled batch of {train_all_dl.batch_size}."
     )
-    
+
     # set optimizer to optimise both models
     params = list(model1.parameters()) + list(model2.parameters())
     optimizer = torch.optim.Adam(params, lr=lr)
@@ -247,8 +256,10 @@ def train_semi_supervised(
             unlabeled_images = unlabeled_images.to(device)
 
             # apply data augmentation
-            if aug_method == 'affine':
-                labeled_images, labels = utils.affine_transformation(labeled_images, labels)
+            if aug_method == "affine":
+                labeled_images, labels = utils.affine_transformation(
+                    labeled_images, labels
+                )
                 unlabeled_images, _ = utils.affine_transformation(unlabeled_images)
 
             # zero gradients
@@ -273,8 +284,7 @@ def train_semi_supervised(
             ## unsupervised part ##
 
             # cross-presudo supervision loss
-            if aug_method is None or aug_method == 'affine':
-
+            if aug_method is None or aug_method == "affine":
                 # get model predictions for unlabeled data
                 unlab_logits1 = model1(unlabeled_images)["out"][:, 0]
                 unlab_logits2 = model2(unlabeled_images)["out"][:, 0]
@@ -291,8 +301,7 @@ def train_semi_supervised(
                 )
 
             # cutmix-style loss
-            elif aug_method in ['cutmix', 'mixup']:
-
+            elif aug_method in ["cutmix", "mixup"]:
                 # augment the unlabeled images
                 (
                     mix_unlab_images,
@@ -311,10 +320,16 @@ def train_semi_supervised(
 
                 # apply augmentation to outputs
                 unlab_target1_mix = utils.apply_image_aug_to_output(
-                    aug_method, unlab_logits1_images_a, unlab_logits1_images_b, unlab_mask
+                    aug_method,
+                    unlab_logits1_images_a,
+                    unlab_logits1_images_b,
+                    unlab_mask,
                 )
                 unlab_target2_mix = utils.apply_image_aug_to_output(
-                    aug_method, unlab_logits2_images_a, unlab_logits2_images_b, unlab_mask
+                    aug_method,
+                    unlab_logits2_images_a,
+                    unlab_logits2_images_b,
+                    unlab_mask,
                 )
 
                 # get predictions for augmented images
@@ -333,8 +348,7 @@ def train_semi_supervised(
                 )
 
             # cutout loss
-            elif aug_method == 'cutout':
-
+            elif aug_method == "cutout":
                 # augment the unlabeled images
                 (
                     masked_images,
@@ -351,9 +365,12 @@ def train_semi_supervised(
 
                 # apply augmentation to outputs
                 # the blacked out regions are set to 2
-                mask = utils.apply_image_aug_to_output(
-                    aug_method, unlab_logits1_orig, None, mask_coordinates
-                ) != 2
+                mask = (
+                    utils.apply_image_aug_to_output(
+                        aug_method, unlab_logits1_orig, None, mask_coordinates
+                    )
+                    != 2
+                )
 
                 # get predictions for masked images
                 unlab_logits1_masked = model1(masked_images)["out"][:, 0]
@@ -364,7 +381,7 @@ def train_semi_supervised(
                 unlab_preds2_masked = (unlab_logits2_masked > 0).detach().clone()
 
                 # compute loss
-                loss_cps = F.binary_cross_entropy_with_logits( 
+                loss_cps = F.binary_cross_entropy_with_logits(
                     unlab_logits1_orig[mask], unlab_preds2_masked[mask].float()
                 ) + F.binary_cross_entropy_with_logits(
                     unlab_logits2_orig[mask], unlab_preds1_masked[mask].float()
@@ -408,8 +425,7 @@ def train_semi_supervised(
             }
         )
         print(
-            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}"
+            f"epoch={epoch+1:2}, time={epoch_time:5.2f}, {train_acc=:4.2%}, {val_acc=:4.2%}, {test_acc=:4.2%},{train_iou=:4.2%}, {val_iou=:4.2%}, {test_iou=:4.2%}"
         )
-
 
     return model1
