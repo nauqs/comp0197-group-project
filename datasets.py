@@ -57,7 +57,7 @@ def load_dataset(root, split, size=224):
     )
 
     # load dataset
-    ds = OxfordIIITPetCached(
+    ds = OxfordIIITPet(
         root=root,
         split=split,
         target_types="segmentation",
